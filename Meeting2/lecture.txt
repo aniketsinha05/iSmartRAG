@@ -1,0 +1,7 @@
+git push
+git pull
+git checkout 
+git add
+git clone
+git init
+git remote add origin <url>
