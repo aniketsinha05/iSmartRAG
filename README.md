@@ -1,4 +1,4 @@
-# 📚 iSmartRAG
+# 📚 iSmartRAG - BTech Major Project
 
 > An AI-powered study assistant that lets students chat with their documents and websites using Retrieval-Augmented Generation (RAG).
 
