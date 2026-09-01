@@ -1,14 +1,11 @@
 """
 website/scrape.py
 Usage:  python scrape.py <URL>
-Fetches the complete raw HTML of the URL and saves it to output/ with a datetime stamp.
-Nothing is parsed, filtered, or modified — bytes go straight to disk.
+Example: python scrape.py https://example.com
 """
 
 import sys, os, re
 from datetime import datetime
-import urllib.request
-import urllib.error
 
 def sanitize_filename(url: str) -> str:
     name = re.sub(r'^https?://', '', url)
@@ -19,64 +16,34 @@ def sanitize_filename(url: str) -> str:
 def main():
     if len(sys.argv) < 2:
         print("Usage: python scrape.py <URL>")
-        print("Example: python scrape.py https://example.com")
         sys.exit(1)
 
     url = sys.argv[1].strip()
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("playwright not found. Installing...")
+        os.system("pip install playwright --break-system-packages -q")
+        os.system("playwright install chromium")
+        from playwright.sync_api import sync_playwright
+
     print(f"Fetching: {url}")
 
-    # ── fetch raw bytes ────────────────────────────────────────────────────
-    raw_bytes = None
     try:
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-            }
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw_bytes = resp.read()
-            charset   = resp.headers.get_content_charset()   # may be None
-            status    = resp.status
-            final_url = resp.url
-        print(f"HTTP {status}  final_url: {final_url}  bytes: {len(raw_bytes):,}")
-    except urllib.error.HTTPError as e:
-        print(f"HTTP error {e.code}: {e.reason} — saving whatever body was returned")
-        try:
-            raw_bytes = e.read()
-            charset   = None
-        except Exception as e2:
-            print(f"Could not read error body: {e2}")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=False)
+            page = browser.new_page()
+            page.goto(url, timeout=60000)
+            page.wait_for_load_state("networkidle", timeout=60000)
+            html = page.content()
+            browser.close()
     except Exception as e:
         print(f"ERROR fetching URL: {e}")
         sys.exit(1)
 
-    if raw_bytes is None:
-        print("Nothing to save.")
-        sys.exit(1)
-
-    # ── decode bytes → str (best-effort, no data loss) ────────────────────
-    html = None
-    for enc in filter(None, [charset, "utf-8", "latin-1"]):
-        try:
-            html = raw_bytes.decode(enc, errors="replace")
-            break
-        except Exception:
-            continue
-    if html is None:
-        # absolute fallback: latin-1 never fails
-        html = raw_bytes.decode("latin-1", errors="replace")
-
-    # ── write output ───────────────────────────────────────────────────────
     timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name  = sanitize_filename(url)
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
