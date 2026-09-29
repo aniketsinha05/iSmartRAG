@@ -1,5 +1,17 @@
 venv/
+.venv/
+.venv-1/
+
 chroma_db/
+backend/chroma_db/
+
 .env
+
 __pycache__/
+*.pyc
+
+backend/uploads/
+
+app_part.txt
+
 backend.zip

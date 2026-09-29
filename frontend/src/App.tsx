@@ -5,7 +5,7 @@ type Page = "Dashboard" | "Knowledge Base" | "Chat" | "Quiz" | "Settings";
 
 type Source = {
   name: string;
-  type: "PDF" | "DOCX" | "PPT" | "WEB";
+  type: "PDF" | "DOCX" | "PPT" | "EXCEL" | "WEB";
   size: string;
 };
 
@@ -252,8 +252,12 @@ function KnowledgeBase({
 }) {
   const [url, setUrl] = useState("");
   const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState("");
 
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const addFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -273,15 +277,51 @@ function KnowledgeBase({
       type = "PPT";
     }
 
-    const newSource: Source = {
-      name: file.name,
-      type,
-      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-    };
+    if (
+      extension === "XLSX" ||
+      extension === "XLS" ||
+      extension === "XLSM" ||
+      extension === "XLTX" ||
+      extension === "CSV"
+    ) {
+      type = "EXCEL";
+    }
 
-    setSources((current) => [...current, newSource]);
+    setUploading(true);
+    setStatus("Uploading and processing...");
 
-    event.target.value = "";
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const newSource: Source = {
+        name: file.name,
+        type,
+        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      };
+
+      setSources((current) => [...current, newSource]);
+
+      setStatus("Uploaded successfully!");
+    } catch (error) {
+      console.error(error);
+      setStatus("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
   };
 
   const addUrl = () => {
@@ -313,7 +353,6 @@ function KnowledgeBase({
     <div className="page-content">
       <div className="page-intro">
         <h1>Your Knowledge Base</h1>
-
         <p>
           Add study materials and websites that iSmartRAG can use
           as sources.
@@ -324,19 +363,25 @@ function KnowledgeBase({
         <label className="upload-card">
           <input
             type="file"
-            accept=".pdf,.doc,.docx,.ppt,.pptx"
+            accept=".pdf,.docx,.pptx,.xlsx,.xls,.xlsm,.xltx,.csv"
             onChange={addFile}
             hidden
           />
 
           <div className="upload-icon">↑</div>
 
-          <h3>Upload documents</h3>
+          <h3>
+            {uploading
+              ? "Processing..."
+              : "Upload documents"}
+          </h3>
 
-          <p>PDF, DOCX or PPT files</p>
+          <p>
+            PDF, DOCX, PPTX or Excel files
+          </p>
 
           <span className="upload-button">
-            Choose File
+            {uploading ? "Uploading..." : "Choose File"}
           </span>
         </label>
 
@@ -345,7 +390,9 @@ function KnowledgeBase({
 
           <h3>Add a website</h3>
 
-          <p>Use a website as a knowledge source.</p>
+          <p>
+            Use a website as a knowledge source.
+          </p>
 
           <div className="url-input-row">
             <input
@@ -361,10 +408,23 @@ function KnowledgeBase({
               }}
             />
 
-            <button onClick={addUrl}>Add</button>
+            <button onClick={addUrl}>
+              Add
+            </button>
           </div>
         </div>
       </div>
+
+      {status && (
+        <p
+          style={{
+            marginTop: "16px",
+            textAlign: "center",
+          }}
+        >
+          {status}
+        </p>
+      )}
 
       <div className="sources-section">
         <div className="sources-header">

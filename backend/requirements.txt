@@ -1,6 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+chromadb
 python-pptx
 python-docx
 openpyxl
 pandas
 xlrd
+pypdf
 playwright
+beautifulsoup4
