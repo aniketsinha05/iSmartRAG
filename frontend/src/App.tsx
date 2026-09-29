@@ -5,7 +5,7 @@ type Page = "Dashboard" | "Knowledge Base" | "Chat" | "Quiz" | "Settings";
 
 type Source = {
   name: string;
-  type: "PDF" | "DOCX" | "PPT" | "WEB";
+  type: "PDF" | "DOCX" | "PPT" | "EXCEL" | "WEB";
   size: string;
 };
 
@@ -183,19 +183,8 @@ function Dashboard({
 
       <div className="stats-grid">
         <Stat number={String(sourceCount)} label="Sources" icon="📄" />
-
-        <Stat
-          number={String(questionCount)}
-          label="Questions Asked"
-          icon="💬"
-        />
-
-        <Stat
-          number={String(quizCount)}
-          label="Quizzes Completed"
-          icon="✓"
-        />
-
+        <Stat number={String(questionCount)} label="Questions Asked" icon="💬" />
+        <Stat number={String(quizCount)} label="Quizzes Completed" icon="✓" />
         <Stat number="0" label="Study Sessions" icon="🧠" />
       </div>
 
@@ -263,13 +252,8 @@ function KnowledgeBase({
 }) {
   const [url, setUrl] = useState("");
   const [search, setSearch] = useState("");
-
-  // Added only for visible PDF upload feedback
-  const [uploadStatus, setUploadStatus] = useState<
-    "idle" | "processing" | "success" | "error"
-  >("idle");
-
-  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState("");
 
   const addFile = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -278,25 +262,40 @@ function KnowledgeBase({
 
     if (!file) return;
 
-    if (file.type !== "application/pdf") {
-      setUploadStatus("error");
-      setUploadMessage("Please select a PDF file.");
-      event.target.value = "";
-      return;
+    const extension = file.name
+      .split(".")
+      .pop()
+      ?.toUpperCase();
+
+    let type: Source["type"] = "PDF";
+
+    if (extension === "DOCX" || extension === "DOC") {
+      type = "DOCX";
     }
 
-    // Show processing message immediately
-    setUploadStatus("processing");
-    setUploadMessage(
-      "⏳ Your PDF is being uploaded and processed..."
-    );
+    if (extension === "PPT" || extension === "PPTX") {
+      type = "PPT";
+    }
 
-    const formData = new FormData();
-    formData.append("file", file);
+    if (
+      extension === "XLSX" ||
+      extension === "XLS" ||
+      extension === "XLSM" ||
+      extension === "XLTX" ||
+      extension === "CSV"
+    ) {
+      type = "EXCEL";
+    }
+
+    setUploading(true);
+    setStatus("Uploading and processing...");
 
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+
       const response = await fetch(
-        "http://127.0.0.1:8000/upload-pdf",
+        "http://127.0.0.1:8000/upload",
         {
           method: "POST",
           body: formData,
@@ -304,46 +303,25 @@ function KnowledgeBase({
       );
 
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(
-          data.message || "PDF upload failed."
-        );
+        throw new Error("Upload failed");
       }
 
       const newSource: Source = {
-        name: data.filename,
-        type: "PDF",
+        name: file.name,
+        type,
         size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
       };
 
       setSources((current) => [...current, newSource]);
 
-      // Show successful processing message
-      setUploadStatus("success");
-      setUploadMessage(
-        `✅ PDF uploaded successfully! ${data.pages} page${
-          data.pages === 1 ? "" : "s"
-        } processed and ${data.text_length.toLocaleString()} characters of text extracted.`
-      );
-
-      console.log("PDF processed successfully");
-      console.log("Pages:", data.pages);
-      console.log("Extracted text:", data.text);
+      setStatus("Uploaded successfully!");
     } catch (error) {
-      console.error("PDF upload error:", error);
-
-      setUploadStatus("error");
-      setUploadMessage(
-        "❌ Could not connect to the iSmartRAG backend. Make sure the backend is running."
-      );
+      console.error(error);
+      setStatus("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
     }
-
-    event.target.value = "";
   };
 
   const addUrl = () => {
@@ -375,65 +353,35 @@ function KnowledgeBase({
     <div className="page-content">
       <div className="page-intro">
         <h1>Your Knowledge Base</h1>
-
         <p>
           Add study materials and websites that iSmartRAG can use
           as sources.
         </p>
       </div>
 
-      {/* PDF upload status - does not change the original UI */}
-      {uploadStatus !== "idle" && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "14px 18px",
-            borderRadius: "12px",
-            background:
-              uploadStatus === "success"
-                ? "#ecfdf3"
-                : uploadStatus === "error"
-                ? "#fff1f2"
-                : "#f5f3ff",
-            border:
-              uploadStatus === "success"
-                ? "1px solid #bbf7d0"
-                : uploadStatus === "error"
-                ? "1px solid #fecdd3"
-                : "1px solid #ddd6fe",
-            color:
-              uploadStatus === "success"
-                ? "#166534"
-                : uploadStatus === "error"
-                ? "#be123c"
-                : "#6d28d9",
-            fontWeight: 500,
-          }}
-        >
-          {uploadMessage}
-        </div>
-      )}
-
       <div className="upload-grid">
         <label className="upload-card">
           <input
             type="file"
-            accept=".pdf"
+            accept=".pdf,.docx,.pptx,.xlsx,.xls,.xlsm,.xltx,.csv"
             onChange={addFile}
             hidden
-            disabled={uploadStatus === "processing"}
           />
 
           <div className="upload-icon">↑</div>
 
-          <h3>Upload PDF</h3>
+          <h3>
+            {uploading
+              ? "Processing..."
+              : "Upload documents"}
+          </h3>
 
-          <p>PDF files only</p>
+          <p>
+            PDF, DOCX, PPTX or Excel files
+          </p>
 
           <span className="upload-button">
-            {uploadStatus === "processing"
-              ? "Processing..."
-              : "Choose File"}
+            {uploading ? "Uploading..." : "Choose File"}
           </span>
         </label>
 
@@ -442,7 +390,9 @@ function KnowledgeBase({
 
           <h3>Add a website</h3>
 
-          <p>Use a website as a knowledge source.</p>
+          <p>
+            Use a website as a knowledge source.
+          </p>
 
           <div className="url-input-row">
             <input
@@ -458,10 +408,23 @@ function KnowledgeBase({
               }}
             />
 
-            <button onClick={addUrl}>Add</button>
+            <button onClick={addUrl}>
+              Add
+            </button>
           </div>
         </div>
       </div>
+
+      {status && (
+        <p
+          style={{
+            marginTop: "16px",
+            textAlign: "center",
+          }}
+        >
+          {status}
+        </p>
+      )}
 
       <div className="sources-section">
         <div className="sources-header">
@@ -499,7 +462,7 @@ function KnowledgeBase({
 
               <p>
                 {sources.length === 0
-                  ? "Upload a PDF or add a website to get started."
+                  ? "Upload a document or add a website to get started."
                   : "Try a different search."}
               </p>
             </div>
@@ -593,8 +556,7 @@ function Chat({
 
             <div>
               <strong>
-                {messages
-                  .find((message) => message.role === "user")
+                {messages.find((message) => message.role === "user")
                   ?.text.slice(0, 25) || "New conversation"}
               </strong>
               <small>Just now</small>
@@ -732,15 +694,9 @@ function Settings() {
     setDarkMode((current) => {
       const next = !current;
 
-      localStorage.setItem(
-        "ismart-dark-mode",
-        String(next)
-      );
+      localStorage.setItem("ismart-dark-mode", String(next));
 
-      document.body.classList.toggle(
-        "dark-mode",
-        next
-      );
+      document.body.classList.toggle("dark-mode", next);
 
       return next;
     });
