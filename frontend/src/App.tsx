@@ -183,8 +183,19 @@ function Dashboard({
 
       <div className="stats-grid">
         <Stat number={String(sourceCount)} label="Sources" icon="📄" />
-        <Stat number={String(questionCount)} label="Questions Asked" icon="💬" />
-        <Stat number={String(quizCount)} label="Quizzes Completed" icon="✓" />
+
+        <Stat
+          number={String(questionCount)}
+          label="Questions Asked"
+          icon="💬"
+        />
+
+        <Stat
+          number={String(quizCount)}
+          label="Quizzes Completed"
+          icon="✓"
+        />
+
         <Stat number="0" label="Study Sessions" icon="🧠" />
       </div>
 
@@ -253,33 +264,84 @@ function KnowledgeBase({
   const [url, setUrl] = useState("");
   const [search, setSearch] = useState("");
 
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Added only for visible PDF upload feedback
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "processing" | "success" | "error"
+  >("idle");
+
+  const [uploadMessage, setUploadMessage] = useState("");
+
+  const addFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    const extension = file.name
-      .split(".")
-      .pop()
-      ?.toUpperCase();
-
-    let type: Source["type"] = "PDF";
-
-    if (extension === "DOCX" || extension === "DOC") {
-      type = "DOCX";
+    if (file.type !== "application/pdf") {
+      setUploadStatus("error");
+      setUploadMessage("Please select a PDF file.");
+      event.target.value = "";
+      return;
     }
 
-    if (extension === "PPT" || extension === "PPTX") {
-      type = "PPT";
+    // Show processing message immediately
+    setUploadStatus("processing");
+    setUploadMessage(
+      "⏳ Your PDF is being uploaded and processed..."
+    );
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/upload-pdf",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(
+          data.message || "PDF upload failed."
+        );
+      }
+
+      const newSource: Source = {
+        name: data.filename,
+        type: "PDF",
+        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      };
+
+      setSources((current) => [...current, newSource]);
+
+      // Show successful processing message
+      setUploadStatus("success");
+      setUploadMessage(
+        `✅ PDF uploaded successfully! ${data.pages} page${
+          data.pages === 1 ? "" : "s"
+        } processed and ${data.text_length.toLocaleString()} characters of text extracted.`
+      );
+
+      console.log("PDF processed successfully");
+      console.log("Pages:", data.pages);
+      console.log("Extracted text:", data.text);
+    } catch (error) {
+      console.error("PDF upload error:", error);
+
+      setUploadStatus("error");
+      setUploadMessage(
+        "❌ Could not connect to the iSmartRAG backend. Make sure the backend is running."
+      );
     }
-
-    const newSource: Source = {
-      name: file.name,
-      type,
-      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-    };
-
-    setSources((current) => [...current, newSource]);
 
     event.target.value = "";
   };
@@ -320,23 +382,58 @@ function KnowledgeBase({
         </p>
       </div>
 
+      {/* PDF upload status - does not change the original UI */}
+      {uploadStatus !== "idle" && (
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "14px 18px",
+            borderRadius: "12px",
+            background:
+              uploadStatus === "success"
+                ? "#ecfdf3"
+                : uploadStatus === "error"
+                ? "#fff1f2"
+                : "#f5f3ff",
+            border:
+              uploadStatus === "success"
+                ? "1px solid #bbf7d0"
+                : uploadStatus === "error"
+                ? "1px solid #fecdd3"
+                : "1px solid #ddd6fe",
+            color:
+              uploadStatus === "success"
+                ? "#166534"
+                : uploadStatus === "error"
+                ? "#be123c"
+                : "#6d28d9",
+            fontWeight: 500,
+          }}
+        >
+          {uploadMessage}
+        </div>
+      )}
+
       <div className="upload-grid">
         <label className="upload-card">
           <input
             type="file"
-            accept=".pdf,.doc,.docx,.ppt,.pptx"
+            accept=".pdf"
             onChange={addFile}
             hidden
+            disabled={uploadStatus === "processing"}
           />
 
           <div className="upload-icon">↑</div>
 
-          <h3>Upload documents</h3>
+          <h3>Upload PDF</h3>
 
-          <p>PDF, DOCX or PPT files</p>
+          <p>PDF files only</p>
 
           <span className="upload-button">
-            Choose File
+            {uploadStatus === "processing"
+              ? "Processing..."
+              : "Choose File"}
           </span>
         </label>
 
@@ -402,7 +499,7 @@ function KnowledgeBase({
 
               <p>
                 {sources.length === 0
-                  ? "Upload a document or add a website to get started."
+                  ? "Upload a PDF or add a website to get started."
                   : "Try a different search."}
               </p>
             </div>
@@ -496,7 +593,8 @@ function Chat({
 
             <div>
               <strong>
-                {messages.find((message) => message.role === "user")
+                {messages
+                  .find((message) => message.role === "user")
                   ?.text.slice(0, 25) || "New conversation"}
               </strong>
               <small>Just now</small>
@@ -634,9 +732,15 @@ function Settings() {
     setDarkMode((current) => {
       const next = !current;
 
-      localStorage.setItem("ismart-dark-mode", String(next));
+      localStorage.setItem(
+        "ismart-dark-mode",
+        String(next)
+      );
 
-      document.body.classList.toggle("dark-mode", next);
+      document.body.classList.toggle(
+        "dark-mode",
+        next
+      );
 
       return next;
     });
