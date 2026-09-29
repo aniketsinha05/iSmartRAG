@@ -1,0 +1,6 @@
+python-pptx
+python-docx
+openpyxl
+pandas
+xlrd
+playwright
