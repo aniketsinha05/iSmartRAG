@@ -191,6 +191,10 @@ def main():
     except Exception as e:
         print(f"ERROR writing output: {e}")
         sys.exit(1)
-
+    # store in vector database
+    sys.path.append(os.path.join(script_dir, ".."))
+    from vector_store import add_document
+    count = add_document("\n".join(lines), filename, "ppt")
+    print(f"Stored {count} chunks in vector DB")
 if __name__ == "__main__":
     main()
