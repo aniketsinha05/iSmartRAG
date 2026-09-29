@@ -1,0 +1,686 @@
+FILE: first.pptx
+PARSED AT: 2026-09-29 22:18:40.048497
+
+============================================================
+CORE PROPERTIES
+============================================================
+title: 
+author: Administrator
+subject: 
+keywords: 
+description: None
+category: 
+last_modified_by: RCK Analytics
+created: 2026-08-06 08:35:21
+modified: 2026-09-01 06:58:51
+revision: 4
+
+slide_width_emu: 12192000
+slide_height_emu: 6858000
+
+total_slides: 14
+
+============================================================
+SLIDE 1
+============================================================
+layout: Title Slide
+slide_id: 256
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 1524000  top: 486889  width: 9144000  height: 2778826
+  [TEXT FRAME]
+    para[0]: Artificial Intelligence and data scienceTitle of Project – Smart Study Assistant with RAG Chatbot
+      run[0]: Artificial Intelligence and data science
+      run[1]: Title of Project – Smart Study Assistant with RAG Chatbot
+
+  -- Shape 2 --
+  name: Subtitle 2
+  shape_type: PLACEHOLDER (14)
+  left: 1324098  top: 3348842  width: 9144000  height: 3305958
+  [TEXT FRAME]
+    para[0]: Project Group ID-
+      run[0]: Project Group ID-
+    para[1]: Team Member – 1) Aniket Sinha
+      run[0]: Team Member – 1) Aniket Sinha
+    para[2]:                                         2) Tanishqa Sevalkar 
+      run[0]:                                         2) 
+      run[1]: Tanishqa
+      run[2]:  
+      run[3]: Sevalkar
+      run[4]:  
+    para[3]:                              3) Arush Hate
+      run[0]:                              3) Arush Hate
+    para[4]:                                4) Sayali Kurale
+      run[0]:                                4) Sayali 
+      run[1]: Kurale
+    para[5]:          Guide Name – Miss Vaishnavi Bhong
+      run[0]:          Guide Name – Miss Vaishnavi Bhong
+    para[6]: 
+    para[7]: Date:01-09-2026
+      run[0]: Date:01-09-2026
+    para[8]: 
+
+  -- Shape 3 --
+  name: Picture 3
+  shape_type: PICTURE (13)
+  left: 1805049  top: 570016  width: 8182099  height: 1306285
+
+============================================================
+SLIDE 2
+============================================================
+layout: Title and Content
+slide_id: 257
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Content:
+      run[0]: Content:
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1757892  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: 
+    para[1]: Introduction
+      run[0]: Introduction
+    para[2]: Problem Statement
+      run[0]: Problem Statement
+    para[3]: Objectives
+      run[0]: Objectives
+    para[4]: Base Paper Details
+      run[0]: Base Paper Details
+    para[5]: Literature Survey
+      run[0]: Literature Survey
+    para[6]: Research Gap
+      run[0]: Research Gap
+    para[7]: References
+      run[0]: References
+
+============================================================
+SLIDE 3
+============================================================
+layout: Title and Content
+slide_id: 260
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Introduction
+      run[0]: Introduction
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: iSmartRAG is a web application that lets students build a personal knowledge base from their own study material — PDFs, Word documents, PowerPoint slides, and websites — and chat with it through a Retrieval-Augmented Generation (RAG) chatbot. Every answer is grounded in the student’s own uploaded content, with citations showing exactly where it came from. Beyond chat, students can auto-generate MCQ quizzes from their material and receive graded, explained feedback, turning it into an active study tool rather than just a search engine.
+      run[0]: iSmartRAG
+      run[1]:  is a web application that lets students build a personal knowledge base from their own study material — PDFs, Word documents, PowerPoint slides, and websites — and chat with it through a Retrieval-Augmented Generation (RAG) chatbot. Every answer is grounded in the student’s own uploaded content, with citations showing exactly where it came from. Beyond chat, students can auto-generate MCQ quizzes from their material and receive graded, explained feedback, turning it into an active study tool rather than just a search engine.
+    para[1]: 
+
+============================================================
+SLIDE 4
+============================================================
+layout: Title and Content
+slide_id: 261
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Problem Statement
+      run[0]: Problem Statement
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: Students study from scattered sources — textbooks, lecture slides, handwritten notes, reference websites — with no unified way to query across all of them.
+General-purpose tools like ChatGPT answer from broad training data, not from a student’s specific syllabus or uploaded material, so answers are often generic, unverifiable, or off-topic.
+      run[0]: Students study from scattered sources — textbooks, lecture slides, handwritten notes, reference websites — with no unified way to query across all of them.
+General-purpose tools like ChatGPT answer from broad training data, not from a student’s specific syllabus or uploaded material, so answers are often generic, unverifiable, or off-topic.
+    para[1]: 
+
+============================================================
+SLIDE 5
+============================================================
+layout: Title and Content
+slide_id: 262
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Objectives
+      run[0]: Objectives
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: Build a unified ingestion pipeline for documents (PDF/DOCX/PPT) and live websites.
+      run[0]: Build a unified ingestion pipeline for documents (PDF/DOCX/PPT) and live websites.
+    para[1]: Develop a multi-turn RAG chatbot that answers strictly from retrieved, cited content.
+      run[0]: Develop a multi-turn RAG chatbot that answers strictly from retrieved, cited content.
+    para[2]: Provide auto-generated quizzes with graded, explained feedback for active recall.
+      run[0]: Provide auto-generated quizzes with graded, explained feedback for active recall.
+    para[3]: Evaluate RAG quality quantitatively using RAGAS (faithfulness, relevancy, recall).
+      run[0]: Evaluate RAG quality quantitatively using RAGAS (faithfulness, relevancy, recall).
+    para[4]: Deploy a real, production-grade system with CI/CD and cloud hosting.
+      run[0]: Deploy a real, production-grade system with CI/CD and cloud hosting.
+    para[5]: 
+
+============================================================
+SLIDE 6
+============================================================
+layout: DEFAULT
+slide_id: 268
+
+  -- Shape 1 --
+  name: Group 40
+  shape_type: GROUP (6)
+  left: 426551  top: -463973  width: 11457432  height: 6455664
+
+  -- Shape 2 --
+  name: Picture 44
+  shape_type: PICTURE (13)
+  left: 2967006  top: 3358219  width: 6164633  height: 3330890
+
+  [SPEAKER NOTES]
+  
+
+============================================================
+SLIDE 7
+============================================================
+layout: DEFAULT
+slide_id: 270
+
+  -- Shape 1 --
+  name: Text 0
+  shape_type: AUTO_SHAPE (1)
+  left: 548640  top: 365760  width: 9144000  height: 320040
+  [TEXT FRAME]
+    para[0]: SECTION 07
+      run[0]: SECTION 07
+
+  -- Shape 2 --
+  name: Text 1
+  shape_type: AUTO_SHAPE (1)
+  left: 548640  top: 658368  width: 10515600  height: 640080
+  [TEXT FRAME]
+    para[0]: Technology Stack
+      run[0]: Technology Stack
+
+  -- Shape 3 --
+  name: Shape 2
+  shape_type: AUTO_SHAPE (1)
+  left: 548640  top: 1600200  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 4 --
+  name: Text 3
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 1691640  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: BACKEND
+      run[0]: BACKEND
+
+  -- Shape 5 --
+  name: Text 4
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 1965960  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: Python + FastAPI
+      run[0]: Python + FastAPI
+
+  -- Shape 6 --
+  name: Shape 5
+  shape_type: AUTO_SHAPE (1)
+  left: 4270248  top: 1600200  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 7 --
+  name: Text 6
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 1691640  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: FRONTEND
+      run[0]: FRONTEND
+
+  -- Shape 8 --
+  name: Text 7
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 1965960  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: React + TypeScript + Tailwind
+      run[0]: React + TypeScript + Tailwind
+
+  -- Shape 9 --
+  name: Shape 8
+  shape_type: AUTO_SHAPE (1)
+  left: 7991856  top: 1600200  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 10 --
+  name: Text 9
+  shape_type: AUTO_SHAPE (1)
+  left: 8193024  top: 1691640  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: SCRAPING
+      run[0]: SCRAPING
+
+  -- Shape 11 --
+  name: Text 10
+  shape_type: AUTO_SHAPE (1)
+  left: 8193024  top: 1965960  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: Playwright + BeautifulSoup
+      run[0]: Playwright + BeautifulSoup
+
+  -- Shape 12 --
+  name: Shape 11
+  shape_type: AUTO_SHAPE (1)
+  left: 548640  top: 2752344  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 13 --
+  name: Text 12
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 2843784  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: VECTOR DB
+      run[0]: VECTOR DB
+
+  -- Shape 14 --
+  name: Text 13
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 3118104  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: ChromaDB
+      run[0]: ChromaDB
+
+  -- Shape 15 --
+  name: Shape 14
+  shape_type: AUTO_SHAPE (1)
+  left: 4270248  top: 2752344  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 16 --
+  name: Text 15
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 2843784  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: LLM
+      run[0]: LLM
+
+  -- Shape 17 --
+  name: Text 16
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 3118104  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: GPT-4o-mini
+      run[0]: GPT-4o-mini
+
+  -- Shape 18 --
+  name: Shape 20
+  shape_type: AUTO_SHAPE (1)
+  left: 548640  top: 3904488  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 19 --
+  name: Text 21
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 3995928  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: AUTH
+      run[0]: AUTH
+
+  -- Shape 20 --
+  name: Text 22
+  shape_type: AUTO_SHAPE (1)
+  left: 749808  top: 4270248  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: JWT
+      run[0]: JWT
+
+  -- Shape 21 --
+  name: Shape 23
+  shape_type: AUTO_SHAPE (1)
+  left: 4270248  top: 3904488  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 22 --
+  name: Text 24
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 3995928  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: CONTAINERS
+      run[0]: CONTAINERS
+
+  -- Shape 23 --
+  name: Text 25
+  shape_type: AUTO_SHAPE (1)
+  left: 4471416  top: 4270248  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: Docker + docker-compose
+      run[0]: Docker + docker-compose
+
+  -- Shape 24 --
+  name: Shape 26
+  shape_type: AUTO_SHAPE (1)
+  left: 7991856  top: 3904488  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 25 --
+  name: Text 27
+  shape_type: AUTO_SHAPE (1)
+  left: 8193024  top: 3995928  width: 3227832  height: 274320
+  [TEXT FRAME]
+    para[0]: CLOUD
+      run[0]: CLOUD
+
+  -- Shape 26 --
+  name: Text 28
+  shape_type: AUTO_SHAPE (1)
+  left: 8193024  top: 4270248  width: 3227832  height: 594360
+  [TEXT FRAME]
+    para[0]: Oracle Cloud Always Free (ARM VM)
+      run[0]: Oracle Cloud Always Free (ARM VM)
+
+  -- Shape 27 --
+  name: Shape 35
+  shape_type: AUTO_SHAPE (1)
+  left: 8015226  top: 2752344  width: 3593592  height: 1024128
+  [TEXT FRAME]
+    para[0]: 
+
+  -- Shape 28 --
+  name: Group 41
+  shape_type: GROUP (6)
+  left: 8174736  top: 2830068  width: 3227832  height: 868680
+
+  -- Shape 29 --
+  name: Text 38
+  shape_type: AUTO_SHAPE (1)
+  left: 457200  top: 6547104  width: 7315200  height: 274320
+  [TEXT FRAME]
+    para[0]: iSmartRAG — Major Project Review 1
+      run[0]: iSmartRAG — Major Project Review 1
+
+  -- Shape 30 --
+  name: Text 39
+  shape_type: AUTO_SHAPE (1)
+  left: 11548872  top: 6547104  width: 365760  height: 274320
+  [TEXT FRAME]
+    para[0]: 10
+      run[0]: 10
+
+  [SPEAKER NOTES]
+  
+
+============================================================
+SLIDE 8
+============================================================
+layout: DEFAULT
+slide_id: 271
+
+  -- Shape 1 --
+  name: Picture 2
+  shape_type: PICTURE (13)
+  left: 2139879  top: 4032779  width: 7912242  height: 2080154
+
+  -- Shape 2 --
+  name: Picture 4
+  shape_type: PICTURE (13)
+  left: 1820333  top: 280987  width: 8525934  height: 3283480
+
+============================================================
+SLIDE 9
+============================================================
+layout: Title and Content
+slide_id: 263
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Base Paper Details
+      run[0]: Base Paper Details
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825624  width: 10515600  height: 4498975
+  [TEXT FRAME]
+    para[0]: Paper 1 — RAG for Knowledge-Intensive NLP Tasks (2020)- This is the original paper that invented RAG. The idea: instead of an AI trying to remember everything on its own, let it look up information from a document store before answering — like an open-book exam instead of relying on memory. It worked better than AI models that only used their own memory.
+      run[0]: Paper 1 — RAG for Knowledge-Intensive NLP Tasks (2020
+      run[1]: )- This is the original paper that invented RAG. The idea: instead of an AI trying to remember everything on its own, let it look up information from a document store before answering — like an open-book exam instead of relying on memory. It worked better than AI models that only used their own memory.
+    para[1]: Paper 2 — Chatbots in Academia (2024) - Built a chatbot for a college/university that looks up relevant documents before answering, and also remembers what was said earlier in the chat so it can handle follow-up questions.
+      run[0]: Paper 2 — Chatbots in Academia (2024) 
+      run[1]: - Built a chatbot for a college/university that looks up relevant documents before answering, and also remembers what was said earlier in the chat so it can handle follow-up questions.
+    para[2]: Paper 3 — Benchmarking RAG Frameworks (2025) - Made a chatbot to help students prepare for the GATE exam. The main point of this paper is that they tested many different combinations of tools (which "search" method + which AI model) to find out which combo gives the best answers without being too slow.
+      run[0]: Paper 3 — Benchmarking RAG Frameworks (2025) 
+      run[1]: - Made a chatbot to help students prepare for the GATE exam. The main point of this paper is that they tested many different combinations of tools (which "search" method + which AI model) to find out which combo gives the best answers without being too slow.
+    para[3]: Paper 4 — RAG Chatbots for Education: A Survey (2025) - Not a new chatbot — just a big review of 47 other papers about education chatbots. It sums up patterns: who these chatbots help (students/teachers), what they're built with, and confirms that this look-up-before-answering approach is the standard way to stop chatbots from making things up.
+      run[0]: Paper 4 — RAG Chatbots for Education: A Survey (2025) 
+      run[1]: - Not a new chatbot — just a big review of 47 other papers about education chatbots. It sums up patterns: who these chatbots help (students/teachers), what they're built with, and confirms that this look-up-before-answering approach is the standard way to stop chatbots from making things up.
+    para[4]: Paper 5 — Smart Web Scraping with Crawl4AI (2025) - Instead of using fixed documents, this system pulls information directly from live web pages. It scrapes a webpage, breaks the text into small chunks, and uses those chunks to answer question
+      run[0]: Paper 5 — Smart Web Scraping with Crawl4AI (2025)
+      run[1]:  - Instead of using fixed documents, this system pulls information directly from live web pages. It scrapes a webpage, breaks the text into small chunks, and uses those chunks to answer question
+    para[5]: Paper 6 — RAG for E-Commerce Customer Support (2024) - Applied the same look-up-before-answering idea to an online store's chatbot — it checks product info, FAQs, and reviews before replying, so it gives correct, up-to-date answers instead of generic ones
+      run[0]: Paper 6 — RAG for E-Commerce Customer Support (2024
+      run[1]: ) - Applied the same look-up-before-answering idea to an online store's chatbot — it checks product info, FAQs, and reviews before replying, so it gives correct, up-to-date answers instead of generic ones
+    para[6]: Paper 7 — Multi-Document Question Answering (2026) - Proposes a chatbot that can pull answers from several documents at once (not just one file) to answer a single question.  Very new paper — not fully verified, so double-check before quoting numbers from it.
+      run[0]: Paper 7 — Multi-Document Question Answering (2026) 
+      run[1]: - Proposes a chatbot that can pull answers from several documents at once (not just one file) to answer a single question.  Very new paper — not fully verified, so double-check before quoting numbers from it.
+    para[7]: Paper 8 — RAGAS: Automated Evaluation (2024) - This paper isn't about building a chatbot — it's about grading one. It gives three simple tests to check chatbot quality: (1) Did it stick to facts from the source? (2) Did it actually answer the question? (3) Did it look up the right information in the first place?
+      run[0]: Paper 8 — RAGAS: Automated Evaluation (2024) 
+      run[1]: - This paper isn't about building a chatbot — it's about grading one. It gives three simple tests to check chatbot quality: (1) Did it stick to facts from the source? (2) Did it actually answer the question? (3) Did it look up the right information in the first place?
+    para[8]: 
+    para[9]: 
+    para[10]: 
+
+============================================================
+SLIDE 10
+============================================================
+layout: Title and Content
+slide_id: 264
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Literature Survey
+      run[0]: Literature Survey
+
+  -- Shape 2 --
+  name: Content Placeholder 3
+  shape_type: TABLE (19)
+  left: 838200  top: 1397000  width: 10430934  height: 4952999
+  [TABLE]
+    row[0]: Paper / Year | Approach | Key Findings
+    row[1]: Lewis et al. (2020) – Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Introduced RAG by combining retrieval with text generation | Retrieval improves factuality and performance on knowledge-intensive tasks
+    row[2]: Maryamah et al. (2024) – Chatbots in Academia: A RAG Approach | RAG-based academic chatbot with conversational memory | Enables context-aware question answering from academic documents
+    row[3]: Towards Efficient Educational Chatbots (2025) | Benchmarked different RAG frameworks and model combinations | Shows that retrieval strategy and model selection affect answer quality and efficiency
+    row[4]: RAG Chatbots for Education: A Survey (2025) | Survey of RAG-based educational chatbots | Identifies RAG as an effective approach for reducing hallucination in educational applications
+    row[5]: RAG Based Smart Web Scraping using Crawl4AI (2025) | Extracts and chunks information from live websites for RAG | Demonstrates that web content can be incorporated into retrieval-based QA
+    row[6]: RAGAS: Automated Evaluation (2024) | Framework for evaluating RAG systems | Provides metrics such as faithfulness, answer relevancy and context recall
+
+============================================================
+SLIDE 11
+============================================================
+layout: Title and Content
+slide_id: 265
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Research Gap
+      run[0]: Research Gap
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: Existing Systems
+      run[0]: Existing Systems
+    para[1]: Most RAG-based educational chatbots focus primarily on question answering from a limited document set. 
+      run[0]: Most RAG-based educational chatbots focus primarily on question answering from a limited document set. 
+    para[2]: Existing approaches generally handle documents or web content separately, rather than providing a unified knowledge base. 
+      run[0]: Existing approaches generally handle documents or web content separately, rather than providing a unified knowledge base. 
+    para[3]: Limited support for ingesting multiple study-material formats such as PDF, DOCX, PPT, and websites in one system. 
+      run[0]: Limited support for ingesting multiple study-material formats such as PDF, DOCX, PPT, and websites in one system. 
+    para[4]: Many systems focus on answering questions but do not integrate active-learning features such as automatic quiz generation and feedback. 
+      run[0]: Many systems focus on answering questions but do not integrate active-learning features such as automatic quiz generation and feedback. 
+    para[5]: RAG evaluation is not consistently integrated into the application using quantitative metrics such as faithfulness, relevancy, and recall. 
+      run[0]: RAG evaluation is not consistently integrated into the application using quantitative metrics such as faithfulness, relevancy, and recall. 
+    para[6]: Identified Research Gap
+      run[0]: Identified Research Gap
+    para[7]: There is a need for a unified, student-centric RAG system that can combine multi-format study materials and web sources, provide citation-grounded conversational answers, generate quizzes for active learning, and quantitatively evaluate response quality.
+      run[0]: There is a need for a unified, student-centric RAG system that can combine multi-format study materials and web sources, provide citation-grounded conversational answers, generate quizzes for active learning, and quantitatively evaluate response quality.
+    para[8]: 
+
+============================================================
+SLIDE 12
+============================================================
+layout: Title and Content
+slide_id: 266
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: References
+      run[0]: References
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838199  top: 1825625  width: 10676467  height: 4667250
+  [TEXT FRAME]
+    para[0]: Lewis, P. et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. arXiv:2005.11401.
+      run[0]: Lewis, P. et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. arXiv:2005.11401.
+    para[1]: Maryamah et al. (2024). Chatbots in Academia: A RAG Approach for Improved Efficient Information Access. IEEE KST 2024.
+      run[0]: Maryamah
+      run[1]:  et al. (2024). Chatbots in Academia: A RAG Approach for Improved Efficient Information Access. IEEE KST 2024.
+    para[2]: (2025). Towards Efficient Educational Chatbots: Benchmarking RAG Frameworks. arXiv:2503.00781.
+      run[0]: (2025). Towards Efficient Educational Chatbots: Benchmarking RAG Frameworks. arXiv:2503.00781.
+    para[3]: (2025). Retrieval-Augmented Generation (RAG) Chatbots for Education: A Survey of Applications. ResearchGate.
+      run[0]: (2025). Retrieval-Augmented Generation (RAG) Chatbots for Education: A Survey of Applications. ResearchGate.
+    para[4]: (2025). RAG Based Implementation for Smart Web Scraping using Crawl4AI. ResearchGate.
+      run[0]: (2025). RAG Based Implementation for Smart Web Scraping using Crawl4AI. ResearchGate.
+    para[5]: (2025). RAG Based Implementation for Smart Web Scraping using Crawl4AI. ResearchGate.
+      run[0]: (2025). RAG Based Implementation for Smart Web Scraping using Crawl4AI. ResearchGate.
+    para[6]: (2026). Enhanced RAG Framework for Intelligent Multi-Document Question Answering. RSIS International.
+      run[0]: (2026). Enhanced RAG Framework for Intelligent Multi-Document Question Answering. RSIS International.
+    para[7]: Es, S. et al. (2024). RAGAS: Automated Evaluation of Retrieval Augmented Generation. EACL 2024. arXiv:2309.15217.
+      run[0]: Es, S. et al. (2024). RAGAS: Automated Evaluation of Retrieval Augmented Generation. EACL 2024. arXiv:2309.15217.
+    para[8]: 
+
+============================================================
+SLIDE 13
+============================================================
+layout: Title and Content
+slide_id: 259
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Base Paper Details
+      run[0]: Base Paper Details
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: Paper Title 
+      run[0]: Paper Title 
+    para[1]: Authors 
+      run[0]: Authors 
+    para[2]: Journal/Conference Name 
+      run[0]: Journal/Conference Name 
+    para[3]: Publisher (IEEE/Elsevier/Springer, etc.) 
+      run[0]: Publisher (IEEE/Elsevier/Springer, etc.) 
+    para[4]: Year of Publication 
+      run[0]: Year of Publication 
+    para[5]: Indexing (Scopus, WoS, etc.) 
+      run[0]: Indexing (Scopus, 
+      run[1]: WoS
+      run[2]: , etc.) 
+    para[6]: DOI (if available)
+      run[0]: DOI (if available)
+    para[7]: 
+
+============================================================
+SLIDE 14
+============================================================
+layout: Title and Content
+slide_id: 258
+
+  -- Shape 1 --
+  name: Title 1
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 365125  width: 10515600  height: 1325563
+  [TEXT FRAME]
+    para[0]: Presentation Tips
+      run[0]: Presentation Tips
+
+  -- Shape 2 --
+  name: Content Placeholder 2
+  shape_type: PLACEHOLDER (14)
+  left: 838200  top: 1825625  width: 10515600  height: 4351338
+  [TEXT FRAME]
+    para[0]: Keep the presentation within 10–12 slides. 
+      run[0]: Keep the presentation within 
+      run[1]: 10–12 slides
+      run[2]: . 
+    para[1]: Use bullet points instead of long paragraphs. 
+      run[0]: Use bullet points instead of long paragraphs. 
+    para[2]: Include diagrams, flowcharts, and tables where appropriate. 
+      run[0]: Include diagrams, flowcharts, and tables where appropriate. 
+    para[3]: Ensure all references are from reputed sources such as Scopus, IEEE Xplore, ScienceDirect, Web of Science (WoS), Springer, or ACM etc. 
+      run[0]: Ensure all references are from reputed sources such as 
+      run[1]: Scopus, IEEE Xplore, ScienceDirect, Web of Science (
+      run[2]: WoS
+      run[3]: ), Springer, or ACM etc.
+      run[4]:  
+    para[4]: Be prepared to explain: 
+      run[0]: Be prepared to explain: 
+    para[5]: Why you selected the topic. 
+      run[0]: Why you selected the topic. 
+    para[6]: Why you chose the base paper. 
+      run[0]: Why you chose the base paper. 
+    para[7]: What research gap you identified. 
+      run[0]: What research gap you identified. 
+    para[8]: How your proposed work differs from existing approaches.
+      run[0]: How your proposed work differs from existing approaches.
+    para[9]: 

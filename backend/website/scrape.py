@@ -39,6 +39,7 @@ def main():
             page.goto(url, timeout=60000)
             page.wait_for_load_state("networkidle", timeout=60000)
             html = page.content()
+            text = page.inner_text("body")
             browser.close()
     except Exception as e:
         print(f"ERROR fetching URL: {e}")
@@ -57,6 +58,10 @@ def main():
     except Exception as e:
         print(f"ERROR writing output: {e}")
         sys.exit(1)
-
+    # store in vector database
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    from vector_store import add_document
+    count = add_document(text, url, "website")
+    print(f"Stored {count} chunks in vector DB")
 if __name__ == "__main__":
     main()
