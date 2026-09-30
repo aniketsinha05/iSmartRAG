@@ -15,3 +15,8 @@ backend/uploads/
 app_part.txt
 
 backend.zip
+
+backend/uploads/
+backend/*/output/
+
+backend/pdf/input/*.pdf
