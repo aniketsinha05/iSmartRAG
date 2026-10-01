@@ -30,7 +30,6 @@ export default function AppShell({
           page={page}
           onMenu={() => setMobileOpen(!mobileOpen)}
         />
-
         {children}
       </main>
     </div>
