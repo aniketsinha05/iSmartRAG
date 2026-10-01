@@ -59,18 +59,33 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .app-shell {
   min-height: 100vh;
   display: flex;
   background: #ffffff;
 }
 
-.main-area {
+.main-content {
   min-width: 0;
   flex: 1;
   margin-left: 260px;
   min-height: 100vh;
   background: #ffffff;
+  transition: margin-left 0.2s ease;
 }
 
 .sidebar {
@@ -86,6 +101,13 @@ input:focus-visible {
   border-right: 1px solid var(--border);
 
   z-index: 100;
+
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.sidebar.sidebar-open {
+  transform: translateX(-100%);
 }
 
 .sidebar-brand {
@@ -218,7 +240,7 @@ input:focus-visible {
 
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 14px;
 
   border-bottom: 1px solid #eeeeee;
   background: rgba(255, 255, 255, 0.96);
@@ -244,6 +266,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 
 .avatar {
@@ -275,16 +298,22 @@ input:focus-visible {
 }
 
 .mobile-menu {
-  display: none;
+  display: grid;
+  place-items: center;
 
   width: 38px;
   height: 38px;
+  flex-shrink: 0;
 
   border-radius: 8px;
   background: transparent;
   color: #444444;
 
   font-size: 20px;
+}
+
+.mobile-menu:hover {
+  background: #f1f1f1;
 }
 
 .page-content {
@@ -1514,6 +1543,8 @@ input:focus-visible {
   gap: 14px;
 
   padding: 20px 24px;
+
+  position: relative;
 }
 
 .large-avatar {
@@ -1529,10 +1560,6 @@ input:focus-visible {
   color: #333333;
 
   font-weight: 600;
-}
-
-.settings-profile {
-  position: relative;
 }
 
 .settings-profile h2 {
@@ -1670,13 +1697,45 @@ input:focus-visible {
   background: #b8b8b8;
 }
 
+
+/* =========================
+   SIDEBAR COLLAPSED STATE
+   ========================= */
+
+.app-shell:has(.sidebar.sidebar-open) .main-content {
+  margin-left: 0;
+}
+
+.sidebar-reopen {
+  position: fixed;
+  left: 12px;
+  top: 16px;
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #333333;
+  cursor: pointer;
+}
+
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
 @media (max-width: 1000px) {
   .sidebar {
     width: 230px;
   }
 
-  .main-area {
+  .main-content {
     margin-left: 230px;
+  }
+
+  .app-shell:has(.sidebar:not(.sidebar-open)) .main-content {
+    margin-left: 0;
   }
 
   .page-content {
@@ -1704,21 +1763,11 @@ input:focus-visible {
 
 @media (max-width: 800px) {
   .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
+    width: 260px;
   }
 
-  .sidebar.sidebar-open {
-    transform: translateX(0);
-  }
-
-  .main-area {
+  .main-content {
     margin-left: 0;
-  }
-
-  .mobile-menu {
-    display: grid;
-    place-items: center;
   }
 
   .topbar {
@@ -1766,7 +1815,7 @@ input:focus-visible {
     height: 62px;
   }
 
-  .main-area {
+  .main-content {
     min-height: 100vh;
   }
 
@@ -1879,6 +1928,11 @@ input:focus-visible {
   }
 }
 
+
+/* =========================
+   DARK MODE
+   ========================= */
+
 body.dark-mode {
   background: #111111;
   color: #f5f5f5;
@@ -1916,13 +1970,21 @@ body.dark-mode .nav-item.active {
   background: #2a2a2a;
 }
 
-body.dark-mode .main-area {
+body.dark-mode .main-content {
   background: #111111;
 }
 
 body.dark-mode .topbar {
   background: #171717;
   border-color: #2a2a2a;
+}
+
+body.dark-mode .mobile-menu {
+  color: #f5f5f5;
+}
+
+body.dark-mode .mobile-menu:hover {
+  background: #242424;
 }
 
 body.dark-mode .stat-card,
@@ -1999,10 +2061,4 @@ body.dark-mode .toggle.on {
 
 body.dark-mode .toggle.on i {
   background: #111111;
-}
-
-body.dark-mode .secondary-button {
-  background: #242424;
-  color: #f5f5f5;
-  border-color: #333333;
 }
