@@ -10,3 +10,5 @@ xlrd
 pypdf
 playwright
 beautifulsoup4
+faiss-cpu
+numpy

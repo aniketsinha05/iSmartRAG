@@ -20,3 +20,5 @@ backend/uploads/
 backend/*/output/
 
 backend/pdf/input/*.pdf
+
+backend/faiss_db/
