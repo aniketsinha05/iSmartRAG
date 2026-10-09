@@ -5,6 +5,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.vector_store import add_document, search
+from backend.llm.generate_answer import generate_answer
 from backend.excel.parse_excel import parse_excel
 from backend.ppt.parse_ppt import parse_ppt
 from backend.word.parse_word import parse_word
@@ -115,3 +116,30 @@ def search_documents(query: str, n_results: int = 3):
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Search failed: {exc}")
+
+
+@app.get("/ask")
+def ask(question: str, n_results: int = 3):
+    question = question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is required.")
+
+    try:
+        results = search(question, n_results=max(1, min(n_results, 10)))
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+
+        if not documents:
+            return {
+                "question": question,
+                "answer": "No documents found. Please upload a file first.",
+                "sources": [],
+            }
+
+        answer = generate_answer(question, documents)
+        sources = sorted({m.get("source") for m in metadatas if m})
+
+        return {"question": question, "answer": answer, "sources": sources}
+
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
