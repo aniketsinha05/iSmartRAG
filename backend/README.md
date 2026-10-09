@@ -1,99 +1,73 @@
-# iSmartRAG — Backend Parsers
+# iSmartRAG Backend
 
-Quick-start reference for all four parsing pipelines.
+FastAPI backend for iSmartRAG. It reads documents, stores them in a FAISS vector database, and answers questions with an LLM.
 
----
-
-## Folder Structure
+## Structure
 
 ```
 backend/
-├── ppt/
-│   ├── input/          ← Drop your .pptx files here
-│   ├── output/         ← Parsed output lands here (auto date-stamped)
-│   └── parse_ppt.py
-│
-├── word/
-│   ├── input/          ← Drop your .docx files here
-│   ├── output/         ← Parsed output lands here (auto date-stamped)
-│   └── parse_word.py
-│
-├── excel/
-│   ├── input/          ← Drop your .xlsx / .xls / .csv files here
-│   ├── output/         ← Parsed output lands here (auto date-stamped)
-│   └── parse_excel.py
-│
-└── website/
-    ├── output/         ← Saved HTML files land here (auto date-stamped)
-    └── scrape.py
+  main.py             API endpoints only
+  vector_store.py     FAISS: add_document(), search()
+  llm/
+    generate_answer.py  Groq LLM call
+  pdf/parse_pdf.py        PDF -> text
+  word/parse_word.py      Word -> text
+  ppt/parse_ppt.py        PowerPoint -> text
+  excel/parse_excel.py    Excel/CSV -> text
+  website/scrape.py       Website -> text
+  requirements.txt
 ```
 
----
+- Each parser has a function that returns text, and can also run from the command line.
+- `main.py` imports these parsers. It does not contain parsing code.
+- Every folder has an `__init__.py`, so run everything from the **project root**.
 
-## Commands
-
-### Website — scrape and save full HTML
-```bash
-cd backend/website
-python scrape.py https://example.com
-```
-Output: `output/example_com__20240915_143022.html`
-
----
-
-### PPT — parse a PowerPoint
-```bash
-cd backend/ppt
-# 1. Copy your file into input/
-# 2. Run:
-python parse_ppt.py my_presentation.pptx
-```
-Output: `output/my_presentation__20240915_143022.txt`
-Extracts: slide titles, body text, tables, chart titles, speaker notes, core properties.
-
----
-
-### Word — parse a Word document
-```bash
-cd backend/word
-# 1. Copy your file into input/
-# 2. Run:
-python parse_word.py report.docx
-```
-Output: `output/report__20240915_143022.txt`
-Extracts: headings, paragraphs, tables, core properties (author, title, dates).
-
----
-
-### Excel — parse a spreadsheet
-```bash
-cd backend/excel
-# 1. Copy your file into input/
-# 2. Run:
-python parse_excel.py data.xlsx   # also works with .xls and .csv
-```
-Output: `output/data__20240915_143022.txt`
-Extracts: all sheets, all rows, aligned column layout.
-
----
-
-## Dependencies
-
-Scripts auto-install their dependencies on first run if missing.
-To install everything upfront:
-
-```bash
-pip install python-pptx python-docx openpyxl pandas
-```
-
----
-
-## Output Naming Convention
-
-All output files follow the pattern:
+## Setup
 
 ```
-<original_filename_without_extension>__<YYYYMMDD_HHMMSS>.<ext>
+pip install -r backend/requirements.txt
+playwright install chromium
 ```
 
-This means re-running a script on the same file never overwrites the previous result.
+Create a `.env` file in the project root (not inside `backend`):
+
+```
+GROQ_API_KEY=your_key_here
+```
+
+## Run
+
+From the project root:
+
+```
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+Open http://localhost:8000/docs to test the endpoints.
+
+## Endpoints
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/` | API running message |
+| GET | `/health` | Health check |
+| POST | `/upload` | Upload a PDF, Word, PowerPoint or Excel file and add it to the knowledge base |
+| POST | `/website` | Scrape a website (`url` parameter) and add it |
+| GET | `/search` | Find the most similar chunks (`query`, `n_results`) |
+| GET | `/ask` | Ask a question (`question`, `n_results`). Returns an answer and its sources |
+
+## Vector store
+
+- FAISS (`IndexFlatIP`) with normalized vectors (cosine similarity).
+- Text is split into chunks of 800 characters with 100 overlap.
+- Data is saved in `backend/faiss_db/` (ignored by Git).
+- Uploading the same file again replaces its old chunks.
+
+## LLM
+
+`/ask` searches the vector store, then sends the top chunks and the question to Groq (`openai/gpt-oss-120b`). The answer uses only the given context. To change the model, edit `MODEL` in `llm/generate_answer.py`.
+
+## Notes
+
+- Never commit `.env`.
+- Legacy `.doc` and `.ppt` files are not supported. Use `.docx` and `.pptx`.
