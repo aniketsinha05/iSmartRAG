@@ -6,30 +6,27 @@ import Topbar from "./Topbar";
 export default function AppShell({
   page,
   setPage,
-  mobileOpen,
-  setMobileOpen,
+  collapsed,
+  setCollapsed,
   children,
 }: {
   page: Page;
   setPage: (page: Page) => void;
-  mobileOpen: boolean;
-  setMobileOpen: (value: boolean) => void;
+  collapsed: boolean;
+  setCollapsed: (value: boolean) => void;
   children: ReactNode;
 }) {
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
       <Sidebar
         page={page}
         setPage={setPage}
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
       />
 
       <main className="main-content">
-        <Topbar
-          page={page}
-          onMenu={() => setMobileOpen(!mobileOpen)}
-        />
+        <Topbar page={page} onMenu={() => setCollapsed(!collapsed)} />
         {children}
       </main>
     </div>

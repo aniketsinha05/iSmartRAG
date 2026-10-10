@@ -9,16 +9,41 @@ import Quiz from "./pages/Quiz/Quiz";
 import Settings from "./pages/Settings/Settings";
 
 import "./App.css";
+import "./theme.css";
 import { fetchSources } from "./services/sourcesService";
 
+// Each page has a URL hash so a refresh (or Back/Forward) keeps you on it.
+const SLUGS: Record<Page, string> = {
+  Dashboard: "home",
+  "Knowledge Base": "knowledge-base",
+  Chat: "chat",
+  Quiz: "quiz",
+  Settings: "settings",
+};
 
+function pageFromHash(): Page {
+  const slug = window.location.hash.replace(/^#\/?/, "");
+  return (Object.keys(SLUGS) as Page[]).find((p) => SLUGS[p] === slug) ?? "Dashboard";
+}
 
 function App() {
-  const [page, setPage] = useState<Page>("Dashboard");
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [page, setPageState] = useState<Page>(pageFromHash);
+
+  const setPage = useCallback((next: Page) => {
+    window.location.hash = `/${SLUGS[next]}`;
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setPageState(pageFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+  // Sidebar starts open on desktop and closed on small screens.
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth <= 900);
   const [sources, setSources] = useState<Source[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
   const [quizCount] = useState(0);
+
   const refreshSources = useCallback(async () => {
     try {
       setSources(await fetchSources());
@@ -35,10 +60,10 @@ function App() {
     <AppShell
       page={page}
       setPage={setPage}
-      mobileOpen={mobileOpen}
-      setMobileOpen={setMobileOpen}
+      collapsed={collapsed}
+      setCollapsed={setCollapsed}
     >
-            {page === "Dashboard" && (
+      {page === "Dashboard" && (
         <DashboardPage
           setPage={setPage}
           sources={sources}
@@ -48,7 +73,7 @@ function App() {
         />
       )}
 
-            {page === "Knowledge Base" && (
+      {page === "Knowledge Base" && (
         <KnowledgeBasePage
           sources={sources}
           refreshSources={refreshSources}
@@ -56,15 +81,11 @@ function App() {
         />
       )}
 
-      {page === "Chat" && (
-        <Chat setQuestionCount={setQuestionCount} />
-      )}
+      {page === "Chat" && <Chat setQuestionCount={setQuestionCount} />}
 
-      {page === "Quiz" && (
-        <Quiz quizCount={quizCount} />
-      )}
+      {page === "Quiz" && <Quiz quizCount={quizCount} sourceCount={sources.length} setPage={setPage} />}
 
-            {page === "Settings" && <Settings sourceCount={sources.length} />}
+      {page === "Settings" && <Settings sourceCount={sources.length} />}
     </AppShell>
   );
 }

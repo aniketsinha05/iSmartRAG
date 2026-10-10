@@ -1,7 +1,6 @@
 import type { Page } from "../../types";
 import { menuItems } from "../../constants/navigation";
 
-// Names shown in the menu (the page names inside the app do not change)
 const DISPLAY_NAME: Record<string, string> = {
   Dashboard: "Home",
   Chat: "Search / Ask",
@@ -10,17 +9,17 @@ const DISPLAY_NAME: Record<string, string> = {
 export default function Sidebar({
   page,
   setPage,
-  mobileOpen,
-  setMobileOpen,
+  collapsed,
+  setCollapsed,
 }: {
   page: Page;
   setPage: (page: Page) => void;
-  mobileOpen: boolean;
-  setMobileOpen: (value: boolean) => void;
+  collapsed: boolean;
+  setCollapsed: (value: boolean) => void;
 }) {
   return (
     <>
-      <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
+      <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
         <div className="sidebar-brand">
           <div className="brand-mark small">iS</div>
 
@@ -28,14 +27,6 @@ export default function Sidebar({
             <strong>iSmartRAG</strong>
             <span>Learning Assistant</span>
           </div>
-
-          <button
-            className="sidebar-toggle"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle sidebar"
-          >
-            ☰
-          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -47,7 +38,7 @@ export default function Sidebar({
               className={`nav-item ${page === item.label ? "active" : ""}`}
               onClick={() => {
                 setPage(item.label);
-                setMobileOpen(false);
+                if (window.innerWidth <= 900) setCollapsed(true);
               }}
             >
               <span className="nav-icon">{item.icon}</span>
@@ -55,26 +46,14 @@ export default function Sidebar({
             </button>
           ))}
         </nav>
-
-        <div className="sidebar-bottom">
-          <button
-            className="nav-item logout"
-            onClick={() => setPage("Dashboard")}
-          >
-            <span className="nav-icon">↪</span>
-            Home
-          </button>
-        </div>
       </aside>
 
-      {mobileOpen && (
+      {!collapsed && (
         <button
-          className="sidebar-reopen"
-          onClick={() => setMobileOpen(false)}
-          aria-label="Open sidebar"
-        >
-          ☰
-        </button>
+          className="sidebar-backdrop"
+          onClick={() => setCollapsed(true)}
+          aria-label="Close sidebar"
+        />
       )}
     </>
   );
