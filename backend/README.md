@@ -1,6 +1,6 @@
-# iSmartRAG Backend
+# MyBookAI Backend
 
-FastAPI backend for iSmartRAG. It reads documents, stores them in a FAISS vector database, and answers questions with an LLM.
+FastAPI backend for MyBookAI. It reads documents, stores them in a FAISS vector database, and answers questions with an LLM.
 
 ## Structure
 

@@ -24,7 +24,7 @@ export default function Sidebar({
           <div className="brand-mark small">iS</div>
 
           <div className="sidebar-brand-text">
-            <strong>iSmartRAG</strong>
+            <strong>MyBookAI</strong>
             <span>Learning Assistant</span>
           </div>
         </div>

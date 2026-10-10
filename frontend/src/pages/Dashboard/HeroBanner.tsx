@@ -10,7 +10,7 @@ export default function HeroBanner({ setPage }: HeroBannerProps) {
       <div className="hero-content">
         <span className="hero-label">YOUR AI STUDY ASSISTANT</span>
 
-        <h1>Study smarter with iSmartRAG</h1>
+        <h1>Study smarter with MyBookAI</h1>
 
         <p>
           Upload your study material, ask questions and test your
