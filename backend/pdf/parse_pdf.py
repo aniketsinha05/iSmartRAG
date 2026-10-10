@@ -33,6 +33,21 @@ def parse_pdf(input_path: str) -> str:
     return "\n".join(lines)
 
 
+def parse_pdf_pieces(input_path: str) -> list:
+    """Return one piece per page: {"text", "page"}."""
+    from pypdf import PdfReader
+
+    pieces = []
+    for idx, page in enumerate(PdfReader(input_path).pages):
+        try:
+            text = (page.extract_text() or "").strip()
+        except Exception:
+            text = ""
+        if text:
+            pieces.append({"text": text, "page": idx + 1})
+    return pieces
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python parse_pdf.py <filename>")

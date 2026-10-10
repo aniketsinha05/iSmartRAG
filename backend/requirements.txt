@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 python-multipart
-chromadb
 python-pptx
 python-docx
 openpyxl
@@ -14,3 +13,8 @@ faiss-cpu
 numpy
 groq
 python-dotenv
+transformers
+torch
+langchain-text-splitters
+rank_bm25
+ 

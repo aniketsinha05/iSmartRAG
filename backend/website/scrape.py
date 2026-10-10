@@ -15,7 +15,7 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def scrape_website(url: str, headless: bool = True) -> str:
+def scrape_website(url: str, headless: bool = False) -> str:
     """Return the visible text of a page. Raises on errors (never sys.exit)."""
     from playwright.sync_api import sync_playwright
 
@@ -27,6 +27,59 @@ def scrape_website(url: str, headless: bool = True) -> str:
         text = page.inner_text("body")
         browser.close()
     return text
+
+
+_BLOCKS_JS = """
+() => {
+  const sel = 'h1,h2,h3,h4,p,li,tr,pre,blockquote';
+  const skip = 'nav,footer,script,style,noscript';
+  const out = [];
+  document.body.querySelectorAll(sel).forEach(el => {
+    if (el.closest(skip)) return;
+    if (el.parentElement && el.parentElement.closest(sel)) return;
+    const tag = el.tagName.toLowerCase();
+    const text = tag === 'tr'
+      ? Array.from(el.children).map(c => c.innerText.trim()).filter(Boolean).join(' | ')
+      : el.innerText.trim();
+    if (text) out.push([tag, text]);
+  });
+  return out;
+}
+"""
+
+
+def scrape_website_pieces(url: str, headless: bool = False) -> list:
+    """Return one piece per heading section: {"text", "section"}. Raises on errors."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=headless)
+        page = browser.new_page()
+        page.goto(url, timeout=60000)
+        page.wait_for_load_state("networkidle", timeout=60000)
+        blocks = page.evaluate(_BLOCKS_JS)
+        body = page.inner_text("body")
+        browser.close()
+
+    if not blocks:  # page without normal text tags: use the plain text
+        return [{"text": body.strip()}] if body.strip() else []
+
+    pieces, buf, section = [], [], None
+
+    def flush():
+        text = "\n".join(buf).strip()
+        if text:
+            pieces.append({"text": text, "section": section})
+        buf.clear()
+
+    for tag, text in blocks:
+        if tag in ("h1", "h2", "h3", "h4"):
+            flush()
+            section = text
+        else:
+            buf.append(text)
+    flush()
+    return pieces
 
 
 def main():

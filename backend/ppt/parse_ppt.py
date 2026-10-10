@@ -95,6 +95,51 @@ def parse_ppt(input_path: str) -> str:
     return "\n".join(lines)
 
 
+def _slide_lines(shapes, lines, title):
+    for shape in shapes:
+        if getattr(shape, "shape_type", None) == 6:  # group
+            _slide_lines(shape.shapes, lines, title)
+            continue
+        if getattr(shape, "has_text_frame", False):
+            text = shape.text_frame.text.replace("\x0b", "\n").strip()
+            if text and text != title:
+                lines.append(text)
+        if getattr(shape, "has_table", False):
+            for row in shape.table.rows:
+                cells = [c.text.strip() for c in row.cells]
+                if any(cells):
+                    lines.append(" | ".join(cells))
+
+
+def parse_ppt_pieces(input_path: str) -> list:
+    """Return one piece per slide: {"text", "page" (slide number), "section" (slide title)}."""
+    from pptx import Presentation
+
+    pieces = []
+    for idx, slide in enumerate(Presentation(input_path).slides, start=1):
+        title = None
+        try:
+            if slide.shapes.title is not None:
+                title = slide.shapes.title.text_frame.text.replace("\x0b", " ").strip() or None
+        except Exception:
+            pass
+
+        lines = []
+        _slide_lines(slide.shapes, lines, title)
+
+        try:
+            if slide.has_notes_slide:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+                if notes:
+                    lines.append(f"Notes: {notes}")
+        except Exception:
+            pass
+
+        if lines:
+            pieces.append({"text": "\n".join(lines), "page": idx, "section": title})
+    return pieces
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python parse_ppt.py <filename>")
