@@ -1,6 +1,12 @@
 import type { Page } from "../../types";
 import { menuItems } from "../../constants/navigation";
 
+// Names shown in the menu (the page names inside the app do not change)
+const DISPLAY_NAME: Record<string, string> = {
+  Dashboard: "Home",
+  Chat: "Search / Ask",
+};
+
 export default function Sidebar({
   page,
   setPage,
@@ -45,7 +51,7 @@ export default function Sidebar({
               }}
             >
               <span className="nav-icon">{item.icon}</span>
-              {item.label}
+              {DISPLAY_NAME[item.label] ?? item.label}
             </button>
           ))}
         </nav>
@@ -56,7 +62,7 @@ export default function Sidebar({
             onClick={() => setPage("Dashboard")}
           >
             <span className="nav-icon">↪</span>
-            Dashboard
+            Home
           </button>
         </div>
       </aside>

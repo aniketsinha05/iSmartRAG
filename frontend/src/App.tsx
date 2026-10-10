@@ -48,7 +48,7 @@ function App() {
         <Quiz quizCount={quizCount} />
       )}
 
-      {page === "Settings" && <Settings />}
+            {page === "Settings" && <Settings sourceCount={sources.length} />}
     </AppShell>
   );
 }
