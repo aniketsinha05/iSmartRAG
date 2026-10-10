@@ -15,7 +15,7 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def scrape_website(url: str, headless: bool = True) -> str:
+def scrape_website(url: str, headless: bool = False) -> str:
     """Return the visible text of a page. Raises on errors (never sys.exit)."""
     from playwright.sync_api import sync_playwright
 
@@ -48,7 +48,7 @@ _BLOCKS_JS = """
 """
 
 
-def scrape_website_pieces(url: str, headless: bool = True) -> list:
+def scrape_website_pieces(url: str, headless: bool = False) -> list:
     """Return one piece per heading section: {"text", "section"}. Raises on errors."""
     from playwright.sync_api import sync_playwright
 
