@@ -5,6 +5,7 @@ import threading
 import faiss
 import numpy as np
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from datetime import datetime, timezone
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE, "faiss_db")
@@ -76,6 +77,7 @@ def add_document(text, source, doc_type):
                 "text": chunk,
                 "source": source,
                 "type": doc_type,
+                "added_at": datetime.now(timezone.utc).isoformat(),
             })
         vecs = np.vstack([vecs, new_vecs])
 
@@ -107,6 +109,60 @@ def search(query, n_results=3):
         "distances": [[float(1 - s) for s, _ in found]],
     }
 
+
+def _save(records, vecs):
+    index = _build_index(vecs)
+
+    with open(META_PATH, "w", encoding="utf-8") as f:
+        json.dump(records, f)
+
+    np.save(VEC_PATH, vecs)
+    faiss.write_index(index, INDEX_PATH)
+
+
+def list_sources():
+    with _lock:
+        records, _ = _load()
+
+    grouped = {}
+
+    for r in records:
+        item = grouped.setdefault(
+            r["source"],
+            {
+                "name": r["source"],
+                "type": r["type"],
+                "chunks": 0,
+                "added_at": r.get("added_at"),
+            },
+        )
+        item["chunks"] += 1
+
+    return list(grouped.values())
+
+
+def get_source_chunks(source, limit=20):
+    with _lock:
+        records, _ = _load()
+
+    return [r["text"] for r in records if r["source"] == source][:limit]
+
+
+def delete_source(source):
+    with _lock:
+        records, vecs = _load()
+
+        keep = [i for i, r in enumerate(records) if r["source"] != source]
+        removed = len(records) - len(keep)
+
+        if removed == 0:
+            return 0
+
+        records = [records[i] for i in keep]
+        vecs = vecs[keep] if keep else _empty()
+        _save(records, vecs)
+
+    return removed
 
 if __name__ == "__main__":
     n = add_document("FAISS is a library for fast similarity search of vectors.", "test.txt", "test")

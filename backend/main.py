@@ -4,7 +4,13 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.vector_store import add_document, search
+from backend.vector_store import (
+    add_document,
+    delete_source,
+    get_source_chunks,
+    list_sources,
+    search,
+)
 from backend.llm.generate_answer import generate_answer
 from backend.excel.parse_excel import parse_excel
 from backend.ppt.parse_ppt import parse_ppt
@@ -143,3 +149,49 @@ def ask(question: str, n_results: int = 3):
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
+
+def _file_size(name: str):
+    if name.startswith(("http://", "https://")):
+        return None
+
+    try:
+        path = UPLOAD_DIR / Path(name).name
+        return path.stat().st_size if path.is_file() else None
+    except OSError:
+        return None
+
+
+@app.get("/sources")
+def get_sources():
+    items = list_sources()
+
+    for item in items:
+        item["size_bytes"] = _file_size(item["name"])
+
+    return {"sources": items}
+
+
+@app.get("/sources/content")
+def source_content(name: str, limit: int = 20):
+    chunks = get_source_chunks(name, max(1, min(limit, 100)))
+
+    if not chunks:
+        raise HTTPException(status_code=404, detail="Source not found.")
+
+    return {"name": name, "chunks": chunks}
+
+
+@app.delete("/sources")
+def remove_source(name: str):
+    removed = delete_source(name)
+
+    if removed == 0:
+        raise HTTPException(status_code=404, detail="Source not found.")
+
+    if not name.startswith(("http://", "https://")):
+        try:
+            (UPLOAD_DIR / Path(name).name).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    return {"success": True, "removed_chunks": removed}
