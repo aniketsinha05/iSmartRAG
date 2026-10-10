@@ -51,7 +51,7 @@ export default function FeatureGrid({ setPage }: FeatureGridProps) {
 
         <Feature
           icon="✨"
-          title="Ask iSmartRAG"
+          title="Ask MyBookAI"
           description="Ask questions and get answers from your study material."
           onClick={() => setPage("Chat")}
         />

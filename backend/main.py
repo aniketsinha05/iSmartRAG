@@ -18,7 +18,7 @@ from backend.word.parse_word import parse_word_pieces
 from backend.pdf.parse_pdf import parse_pdf_pieces
 from backend.website.scrape import scrape_website_pieces, normalize_url
 
-app = FastAPI(title="iSmartRAG API", version="1.0.0")
+app = FastAPI(title="MyBookAI API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,7 +49,7 @@ PARSERS = {
 
 @app.get("/")
 def root():
-    return {"message": "iSmartRAG API is running"}
+    return {"message": "MyBookAI API is running"}
 
 
 @app.get("/health")

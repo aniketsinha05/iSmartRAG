@@ -1,6 +1,6 @@
-# iSmartRAG
+# MyBookAI
 
-iSmartRAG is a study assistant. You upload your own study material (PDF, Word, PowerPoint, Excel) or add a website, and then ask questions. The answers come only from your own documents.
+MyBookAI is a study assistant. You upload your own study material (PDF, Word, PowerPoint, Excel) or add a website, and then ask questions. The answers come only from your own documents.
 
 ## How it works
 
@@ -20,7 +20,7 @@ iSmartRAG is a study assistant. You upload your own study material (PDF, Word, P
 ## Project structure
 
 ```
-iSmartRAG/
+MyBookAI/
   backend/    FastAPI app, parsers, vector store, LLM (see backend/README.md)
   frontend/   React app
 ```

@@ -208,7 +208,7 @@ export default function Dashboard({
             <span className="hm-accent">Knowledge Assistant</span>
           </h1>
           <p>
-            Upload documents, add websites, and ask anything. iSmartRAG
+            Upload documents, add websites, and ask anything. MyBookAI
             uses AI to find the most relevant information from your
             knowledge base.
           </p>

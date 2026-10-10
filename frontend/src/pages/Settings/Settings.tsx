@@ -10,8 +10,8 @@
 
   // Read-only values that live in the backend.
   const CHUNK_SIZE = 800;
-  const CHUNK_OVERLAP = 100;
-  const EMBEDDING_MODEL = "all-MiniLM-L6-v2";
+  const CHUNK_OVERLAP = 120;
+  const EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5";
   const ANSWER_MODEL = "openai/gpt-oss-120b";
   const FILE_TYPES = "PDF, DOCX, PPTX, XLSX, XLS, CSV";
 

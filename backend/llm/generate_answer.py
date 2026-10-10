@@ -9,7 +9,7 @@ load_dotenv(os.path.join(ROOT, ".env"))
 MODEL = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = (
-    "You are iSmartRAG, a study assistant. Answer the question using ONLY "
+    "You are MyBookAI, a study assistant. Answer the question using ONLY "
     "the context given. If the answer is not in the context, say "
     "'I could not find this in your documents.' Keep the answer short and clear."
 )
