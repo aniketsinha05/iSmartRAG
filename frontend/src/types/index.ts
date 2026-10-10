@@ -10,6 +10,8 @@ export type Source = {
   type: "PDF" | "DOCX" | "PPT" | "EXCEL" | "WEB";
   size: string;
   chunks?: number;
+  addedAt?: string | null;
+  sizeBytes?: number | null;
 };
 
 export type Message = {
