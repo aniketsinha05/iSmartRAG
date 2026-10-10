@@ -24,12 +24,13 @@ function App() {
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
     >
-      {page === "Dashboard" && (
+            {page === "Dashboard" && (
         <DashboardPage
           setPage={setPage}
-          sourceCount={sources.length}
+          sources={sources}
+          setSources={setSources}
           questionCount={questionCount}
-          quizCount={quizCount}
+          setQuestionCount={setQuestionCount}
         />
       )}
 
