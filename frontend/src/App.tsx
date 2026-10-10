@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Page, Source } from "./types";
 
 import DashboardPage from "./pages/Dashboard/Dashboard";
@@ -9,6 +9,9 @@ import Quiz from "./pages/Quiz/Quiz";
 import Settings from "./pages/Settings/Settings";
 
 import "./App.css";
+import { fetchSources } from "./services/sourcesService";
+
+
 
 function App() {
   const [page, setPage] = useState<Page>("Dashboard");
@@ -16,6 +19,17 @@ function App() {
   const [sources, setSources] = useState<Source[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
   const [quizCount] = useState(0);
+  const refreshSources = useCallback(async () => {
+    try {
+      setSources(await fetchSources());
+    } catch (error) {
+      console.error("Could not load sources", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSources();
+  }, [refreshSources]);
 
   return (
     <AppShell
@@ -24,19 +38,21 @@ function App() {
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
     >
-      {page === "Dashboard" && (
+            {page === "Dashboard" && (
         <DashboardPage
           setPage={setPage}
-          sourceCount={sources.length}
+          sources={sources}
+          setSources={setSources}
           questionCount={questionCount}
-          quizCount={quizCount}
+          setQuestionCount={setQuestionCount}
         />
       )}
 
-      {page === "Knowledge Base" && (
+            {page === "Knowledge Base" && (
         <KnowledgeBasePage
           sources={sources}
-          setSources={setSources}
+          refreshSources={refreshSources}
+          setPage={setPage}
         />
       )}
 

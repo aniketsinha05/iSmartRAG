@@ -1,12 +1,12 @@
 import { apiClient } from "./apiClient";
 
-export async function searchDocuments(query: string, nResults = 3) {
+export async function askQuestion(question: string, nResults = 3) {
   const params = new URLSearchParams({
-    query,
+    question,
     n_results: String(nResults),
   });
 
-  const response = await apiClient(`/search?${params.toString()}`);
+  const response = await apiClient(`/ask?${params.toString()}`);
 
   return response.json();
 }
