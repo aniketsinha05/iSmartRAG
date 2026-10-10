@@ -66,6 +66,51 @@ def parse_word(input_path: str) -> str:
     return "\n".join(lines)
 
 
+def parse_word_pieces(input_path: str) -> list:
+    """Return one piece per heading section: {"text", "section"}."""
+    from docx import Document
+
+    doc = Document(input_path)
+    if hasattr(doc, "iter_inner_content"):
+        blocks = doc.iter_inner_content()  # paragraphs and tables in document order
+    else:
+        blocks = list(doc.paragraphs) + list(doc.tables)
+
+    pieces, buf, section = [], [], None
+
+    def flush():
+        text = "\n".join(buf).strip()
+        if text:
+            pieces.append({"text": text, "section": section})
+        buf.clear()
+
+    for block in blocks:
+        if hasattr(block, "rows"):  # table
+            for row in block.rows:
+                cells = [c.text.strip() for c in row.cells]
+                if any(cells):
+                    buf.append(" | ".join(cells))
+            continue
+
+        text = block.text.strip()
+        if not text:
+            continue
+
+        try:
+            style = block.style.name or ""
+        except Exception:
+            style = ""
+
+        if style.startswith("Heading") or style == "Title":
+            flush()
+            section = text
+        else:
+            buf.append(text)
+
+    flush()
+    return pieces
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python parse_word.py <filename>")

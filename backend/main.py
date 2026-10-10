@@ -5,18 +5,18 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.vector_store import (
-    add_document,
+    add_pieces,
     delete_source,
     get_source_chunks,
     list_sources,
     search,
 )
 from backend.llm.generate_answer import generate_answer
-from backend.excel.parse_excel import parse_excel
-from backend.ppt.parse_ppt import parse_ppt
-from backend.word.parse_word import parse_word
-from backend.pdf.parse_pdf import parse_pdf
-from backend.website.scrape import scrape_website, normalize_url
+from backend.excel.parse_excel import parse_excel_pieces
+from backend.ppt.parse_ppt import parse_ppt_pieces
+from backend.word.parse_word import parse_word_pieces
+from backend.pdf.parse_pdf import parse_pdf_pieces
+from backend.website.scrape import scrape_website_pieces, normalize_url
 
 app = FastAPI(title="iSmartRAG API", version="1.0.0")
 
@@ -34,16 +34,16 @@ app.add_middleware(
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# file extension -> (parser function, type stored in the vector DB)
+# file extension -> (parser function that returns pieces, type stored in the vector DB)
 PARSERS = {
-    ".pdf": (parse_pdf, "pdf"),
-    ".docx": (parse_word, "word"),
-    ".pptx": (parse_ppt, "ppt"),
-    ".xlsx": (parse_excel, "excel"),
-    ".xlsm": (parse_excel, "excel"),
-    ".xltx": (parse_excel, "excel"),
-    ".xls": (parse_excel, "excel"),
-    ".csv": (parse_excel, "excel"),
+    ".pdf": (parse_pdf_pieces, "pdf"),
+    ".docx": (parse_word_pieces, "word"),
+    ".pptx": (parse_ppt_pieces, "ppt"),
+    ".xlsx": (parse_excel_pieces, "excel"),
+    ".xlsm": (parse_excel_pieces, "excel"),
+    ".xltx": (parse_excel_pieces, "excel"),
+    ".xls": (parse_excel_pieces, "excel"),
+    ".csv": (parse_excel_pieces, "excel"),
 }
 
 
@@ -73,11 +73,11 @@ async def upload_file(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
 
         parser, doc_type = PARSERS[suffix]
-        text = parser(str(file_path))
-        if not text.strip():
+        pieces = parser(str(file_path))
+        if not pieces:
             raise HTTPException(status_code=400, detail="No readable text found.")
 
-        chunks = add_document(text, filename, doc_type)
+        chunks = add_pieces(pieces, filename, doc_type)
         return {"success": True, "filename": filename, "type": doc_type, "chunks": chunks}
     except HTTPException:
         raise
@@ -91,10 +91,10 @@ async def upload_file(file: UploadFile = File(...)):
 def add_website(url: str):
     url = normalize_url(url)
     try:
-        text = scrape_website(url)
-        if not text.strip():
+        pieces = scrape_website_pieces(url)
+        if not pieces:
             raise HTTPException(status_code=400, detail="No readable text found.")
-        chunks = add_document(text, url, "website")
+        chunks = add_pieces(pieces, url, "website")
         return {"success": True, "url": url, "type": "website", "chunks": chunks}
     except HTTPException:
         raise
