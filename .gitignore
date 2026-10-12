@@ -24,7 +24,8 @@ backend/pdf/input/*.pdf
 backend/faiss_db/
 
 
-   backend/classrooms.json
+backend/classrooms.json
 
+backend/chats.json
 
 venv312/   
