@@ -18,6 +18,19 @@ const SUGGESTIONS = [
   { title: "Explain a concept",     text: "Explain the most important concept in simple terms." },
 ];
 
+const ACTIVE_CHAT_KEY = "mybookai-active-chat";
+
+const readActiveChat = (): string | null => {
+  try { return localStorage.getItem(ACTIVE_CHAT_KEY); } catch { return null; }
+};
+
+const writeActiveChat = (id: string | null) => {
+  try {
+    if (id) localStorage.setItem(ACTIVE_CHAT_KEY, id);
+    else localStorage.removeItem(ACTIVE_CHAT_KEY);
+  } catch {}
+};
+
 function formatWhen(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -72,12 +85,17 @@ export default function Chat({
         setChatList(list);
 
         // auto-load the most recent chat
-        if (list.length > 0) {
-          const chat = await fetchGeneralChat(list[0].id);
-          if (cancelled) return;
-          setChatId(chat.id);
-          setMessages(chat.messages);
-        }
+        // Coming from "Chat with <classroom>" should start fresh
+        if (initialClassroomIds.length > 0 || list.length === 0) return;
+
+        const saved = readActiveChat();
+        const target = list.find((c) => c.id === saved) ?? list[0];
+
+        const chat = await fetchGeneralChat(target.id);
+        if (cancelled) return;
+        setChatId(chat.id);
+        setMessages(chat.messages);
+        writeActiveChat(chat.id);
       } catch (err) {
         console.error("Could not load saved chats:", err);
       } finally {
@@ -148,6 +166,7 @@ export default function Chat({
         const created = await createGeneralChat();
         activeChatId = created.id;
         setChatId(activeChatId);
+        writeActiveChat(activeChatId);
       }
 
       const data =
@@ -186,6 +205,7 @@ export default function Chat({
       const chat = await fetchGeneralChat(id);
       setChatId(chat.id);
       setMessages(chat.messages);
+      writeActiveChat(chat.id);
     } catch (err) {
       console.error(err);
     }
@@ -198,6 +218,7 @@ export default function Chat({
       if (chat.id === chatId) {
         setChatId(null);
         setMessages([]);
+        writeActiveChat(null);
       }
       await refreshChatList();
     } catch (err) {
@@ -207,6 +228,7 @@ export default function Chat({
 
   const newChat = () => {
     setChatId(null);
+    writeActiveChat(null);
     setMessages([]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";

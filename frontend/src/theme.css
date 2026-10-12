@@ -927,3 +927,13 @@ body.dark-mode .ct-scope-btn.active {
   background: #1c2a47;
   color: #93c5fd;
 }
+/* history rows: don't inherit the default button background */
+.ct-hist-main,
+.ct-hist-del {
+  background: transparent;
+}
+
+/* "New chat" text was dark-on-dark */
+body.dark-mode .ct-new {
+  color: #f5f5f5;
+}
