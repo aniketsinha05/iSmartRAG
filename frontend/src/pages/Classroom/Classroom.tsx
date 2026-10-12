@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import type { Classroom, Page, Source } from "../../types";
-import Chat from "../Chat/Chat";
 import {
   fetchClassroomDocuments,
   importDocuments,
@@ -9,12 +8,8 @@ import {
   uploadToClassroom,
 } from "../../services/classroomService";
 
-type Tab = "documents" | "chat";
-
 type ClassroomPageProps = {
   classroomId: number;
-  tab: Tab;
-  onTabChange: (tab: Tab) => void;
   sources: Source[];
   refreshSources: () => Promise<void>;
   setPage: (page: Page) => void;
@@ -33,21 +28,16 @@ const TYPE_ICON: Record<Source["type"], string> = {
 
 function typeLabel(source: Source): string {
   if (source.type === "WEB") return "Website";
-
   if (source.type === "EXCEL") {
     return source.name.toLowerCase().endsWith(".csv") ? "CSV" : "Excel";
   }
-
   return source.type;
 }
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-
   const date = new Date(iso);
-
   if (Number.isNaN(date.getTime())) return "—";
-
   return date.toLocaleString(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -56,12 +46,10 @@ function formatDate(iso: string | null | undefined): string {
 
 export default function ClassroomPage({
   classroomId,
-  tab,
-  onTabChange,
   sources,
   refreshSources,
   setPage,
-  setQuestionCount,
+  setQuestionCount: _setQuestionCount,
 }: ClassroomPageProps) {
   const [room, setRoom] = useState<Classroom | null>(null);
   const [docs, setDocs] = useState<Source[]>([]);
@@ -99,11 +87,9 @@ export default function ClassroomPage({
 
   useEffect(() => {
     if (!importOpen) return;
-
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setImportOpen(false);
     };
-
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [importOpen]);
@@ -130,19 +116,14 @@ export default function ClassroomPage({
 
   const confirmImport = async () => {
     if (picked.length === 0) return;
-
     setBusy(true);
     setMessage("");
-
     try {
       const result = await importDocuments(classroomId, picked);
       await load();
       setImportOpen(false);
-
       setMessage(
-        `Added ${result.added.length} document${
-          result.added.length === 1 ? "" : "s"
-        } to ${roomName}.` +
+        `Added ${result.added.length} document${result.added.length === 1 ? "" : "s"} to ${roomName}.` +
           (result.skipped.length > 0
             ? ` ${result.skipped.length} already in this classroom.`
             : "")
@@ -159,12 +140,9 @@ export default function ClassroomPage({
     const ok = window.confirm(
       `Remove "${doc.name}" from ${roomName}? The original stays in the Knowledge Base and in other classrooms.`
     );
-
     if (!ok) return;
-
     setBusy(true);
     setMessage("");
-
     try {
       await removeClassroomDocument(classroomId, doc.name);
       await load();
@@ -180,12 +158,9 @@ export default function ClassroomPage({
   const onUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-
     if (!file) return;
-
     setBusy(true);
     setMessage("");
-
     try {
       await uploadToClassroom(classroomId, file);
       await load();
@@ -211,8 +186,8 @@ export default function ClassroomPage({
           <div>
             <h1>{roomName}</h1>
             <p>
-              The documents and the chat in this classroom use only the files
-              listed here.
+              Manage the documents in this classroom. To chat, use the button
+              below — answers will be scoped to this classroom's files only.
             </p>
           </div>
         </div>
@@ -226,147 +201,132 @@ export default function ClassroomPage({
         </button>
       </div>
 
+      {/* Toolbar — documents count + Chat shortcut */}
       <div className="kb-toolbar">
+        <span className="cp-name">Documents ({docs.length})</span>
+
         <button
           type="button"
-          className={`hm-tab ${tab === "documents" ? "active" : ""}`}
-          onClick={() => onTabChange("documents")}
+          className="hm-primary hm-small"
+          style={{ marginLeft: "auto" }}
+          onClick={() => {
+            try {
+              sessionStorage.setItem("mybookai-fresh-chat", "1");
+              localStorage.setItem("mybookai-chat-scope", String(classroomId));
+            } catch {}
+            window.location.hash = "/chat";
+          }}
         >
-          Documents ({docs.length})
-        </button>
-        <button
-          type="button"
-          className={`hm-tab ${tab === "chat" ? "active" : ""}`}
-          onClick={() => onTabChange("chat")}
-        >
-          Chat
+          💬 Chat with {roomName}
         </button>
       </div>
 
       {message && <p className="sx-note">{message}</p>}
 
-      {tab === "documents" && (
-        <section className="sx-card">
-          <div className="cr-bar">
-            <strong>
-              {docs.length} document{docs.length === 1 ? "" : "s"} in{" "}
-              {roomName}
-            </strong>
+      {/* Documents section — always visible, no tab switching */}
+      <section className="sx-card">
+        <div className="cr-bar">
+          <strong>
+            {docs.length} document{docs.length === 1 ? "" : "s"} in {roomName}
+          </strong>
 
-            <div className="cr-bar-actions">
-              <button
-                type="button"
-                className="hm-primary"
-                disabled={busy}
-                onClick={openImport}
-              >
-                Import from Knowledge Base
-              </button>
+          <div className="cr-bar-actions">
+            <button
+              type="button"
+              className="hm-primary"
+              disabled={busy}
+              onClick={openImport}
+            >
+              Import from Knowledge Base
+            </button>
 
-              <button
-                type="button"
-                className="sx-btn"
-                disabled={busy}
-                onClick={() => fileRef.current?.click()}
-              >
-                Upload file
-              </button>
+            <button
+              type="button"
+              className="sx-btn"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
+              Upload file
+            </button>
 
-              <input
-                ref={fileRef}
-                type="file"
-                accept={ACCEPT}
-                hidden
-                onChange={onUpload}
-              />
-            </div>
-          </div>
-
-          {loading && <div className="hm-empty">Loading documents...</div>}
-
-          {error && <p className="hm-error">{error}</p>}
-
-          {!loading && !error && docs.length === 0 && (
-            <div className="hm-empty">
-              No documents yet. Import documents from the Knowledge Base or
-              upload a file. Until then, this classroom chat will not find any
-              answers.
-            </div>
-          )}
-
-          {docs.length > 0 && (
-            <div className="kb-table-wrap">
-              <table className="kb-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Chunks</th>
-                    <th>Size</th>
-                    <th>Added At</th>
-                    <th></th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {docs.map((doc) => (
-                    <tr key={doc.name}>
-                      <td>
-                        <div className="kb-name">
-                          <span className="hm-file-icon">
-                            {TYPE_ICON[doc.type]}
-                          </span>
-                          <div>
-                            <strong>{doc.name}</strong>
-                            <small>
-                              {doc.type === "WEB"
-                                ? "Website"
-                                : `${typeLabel(doc)} document`}
-                            </small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="kb-type">{typeLabel(doc)}</span>
-                      </td>
-                      <td>{doc.chunks ?? "—"}</td>
-                      <td>{doc.size}</td>
-                      <td>{formatDate(doc.addedAt)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="kb-action danger"
-                          disabled={busy}
-                          onClick={() => removeDoc(doc)}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === "chat" && (
-        <>
-          <p className="hm-meta">
-            You are chatting in <strong>{roomName}</strong>. Answers use only
-            its {docs.length} document{docs.length === 1 ? "" : "s"}.
-          </p>
-
-          <div className="cr-chat">
-            <Chat
-              classroom={{ id: classroomId, name: roomName }}
-              setQuestionCount={setQuestionCount}
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPT}
+              hidden
+              onChange={onUpload}
             />
           </div>
-        </>
-      )}
+        </div>
 
+        {loading && <div className="hm-empty">Loading documents...</div>}
+
+        {error && <p className="hm-error">{error}</p>}
+
+        {!loading && !error && docs.length === 0 && (
+          <div className="hm-empty">
+            No documents yet. Import from the Knowledge Base or upload a file.
+            Until then, the classroom chat will not find any answers.
+          </div>
+        )}
+
+        {docs.length > 0 && (
+          <div className="kb-table-wrap">
+            <table className="kb-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Chunks</th>
+                  <th>Size</th>
+                  <th>Added At</th>
+                  <th></th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {docs.map((doc) => (
+                  <tr key={doc.name}>
+                    <td>
+                      <div className="kb-name">
+                        <span className="hm-file-icon">
+                          {TYPE_ICON[doc.type]}
+                        </span>
+                        <div>
+                          <strong>{doc.name}</strong>
+                          <small>
+                            {doc.type === "WEB"
+                              ? "Website"
+                              : `${typeLabel(doc)} document`}
+                          </small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="kb-type">{typeLabel(doc)}</span>
+                    </td>
+                    <td>{doc.chunks ?? "—"}</td>
+                    <td>{doc.size}</td>
+                    <td>{formatDate(doc.addedAt)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="kb-action danger"
+                        disabled={busy}
+                        onClick={() => removeDoc(doc)}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Import modal */}
       {importOpen && (
         <div
           className="cr-overlay"
@@ -415,7 +375,6 @@ export default function ClassroomPage({
               ) : (
                 available.map((source) => {
                   const already = inClassroom.has(source.name);
-
                   return (
                     <label
                       key={source.name}

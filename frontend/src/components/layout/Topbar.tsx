@@ -5,7 +5,7 @@ import { API_BASE_URL } from "../../config/env";
 const TITLES: Record<Page, string> = {
   Dashboard: "Home",
   "Knowledge Base": "Knowledge Base",
-  Chat: "Search / Ask",
+  Chat: "Chatbot",
   Classroom: "Classroom",
   Quiz: "Quiz",
   Settings: "Settings",
@@ -49,6 +49,44 @@ export default function Topbar({
 
       <div className="topbar-title">
         <h2>{TITLES[page]}</h2>
+
+        {page === "Chat" && (
+          <span className="tt-wrap">
+            <button type="button" className="tt-btn" aria-label="How the chatbot finds answers">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 11v5M12 8h.01" />
+              </svg>
+            </button>
+
+            <div className="tt-pop" role="tooltip">
+              <strong>How the chatbot finds answers</strong>
+              <ul>
+                <li>
+                  <b>No classroom selected:</b> it searches your entire
+                  Knowledge Base, including documents that are not in any
+                  classroom.
+                </li>
+                <li>
+                  <b>Classroom selected</b> (use the + button): it searches
+                  only that classroom's documents. You can pick several, and
+                  a shared document is used once.
+                </li>
+                <li>
+                  Each answer is built from the 5 most relevant chunks, so
+                  with many documents a narrower scope gives better answers.
+                </li>
+                <li>
+                  It answers only from your documents. If the answer isn't
+                  there, it says so.
+                </li>
+                <li>
+                  Chats are saved in the Recent list, whatever the scope.
+                </li>
+              </ul>
+            </div>
+          </span>
+        )}
       </div>
 
       <div className="topbar-right">
@@ -67,11 +105,18 @@ export default function Topbar({
           &#128276;
         </button>
 
-        <div className="topbar-user">
+        <button
+          type="button"
+          className="topbar-user"
+          onClick={() => {
+            window.location.hash = "/settings";
+          }}
+          aria-label="Open settings"
+          title="Settings"
+        >
           <span className="topbar-avatar">U</span>
           <span className="topbar-name">User</span>
-          <span className="topbar-caret">&#8964;</span>
-        </div>
+        </button>
       </div>
     </header>
   );

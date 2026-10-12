@@ -25,8 +25,8 @@ app = FastAPI(title="MyBookAI API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:5174", "http://127.0.0.1:5174",
+        "http://localhost:5173",
+        "http://localhost:4173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -36,7 +36,11 @@ app.add_middleware(
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# file extension -> (parser function that returns pieces, type stored in the vector DB)
+# Sentinel classroom_id used for the general (non-classroom) chat bucket.
+# chats.py stores by str(classroom_id), so "0" is a valid key that never
+# conflicts with real classrooms (which are 1-5).
+GENERAL_CHAT_BUCKET = 0
+
 PARSERS = {
     ".pdf": (parse_pdf_pieces, "pdf"),
     ".docx": (parse_word_pieces, "word"),
@@ -48,6 +52,8 @@ PARSERS = {
     ".csv": (parse_excel_pieces, "excel"),
 }
 
+
+# ── Core ──────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 def root():
@@ -127,10 +133,14 @@ def search_documents(query: str, n_results: int = 3):
 
 
 @app.get("/ask")
-def ask(question: str, n_results: int = 3):
+def ask(question: str, n_results: int = 3, chat_id: str | None = None):
     question = question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required.")
+
+    # If a chat_id is provided it must exist in the general bucket
+    if chat_id is not None and chats.get_chat(GENERAL_CHAT_BUCKET, chat_id) is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
 
     try:
         results = search(question, n_results=max(1, min(n_results, 10)))
@@ -138,24 +148,58 @@ def ask(question: str, n_results: int = 3):
         metadatas = results.get("metadatas", [[]])[0]
 
         if not documents:
-            return {
-                "question": question,
-                "answer": "No documents found. Please upload a file first.",
-                "sources": [],
-            }
+            answer = "No documents found. Please upload a file first."
+            sources = []
+        else:
+            answer = generate_answer(question, documents)
+            sources = sorted({m.get("source") for m in metadatas if m})
 
-        answer = generate_answer(question, documents)
-        sources = sorted({m.get("source") for m in metadatas if m})
+        if chat_id is not None:
+            chats.add_messages(
+                GENERAL_CHAT_BUCKET,
+                chat_id,
+                [{"role": "user", "text": question}, {"role": "ai", "text": answer}],
+            )
 
-        return {"question": question, "answer": answer, "sources": sources}
+        return {"question": question, "answer": answer, "sources": sources, "chat_id": chat_id}
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
 
+
+# ── General chat persistence (bucket 0) ───────────────────────────────────────
+
+@app.get("/chats")
+def list_general_chats():
+    return {"chats": chats.list_chats(GENERAL_CHAT_BUCKET)}
+
+
+@app.post("/chats")
+def new_general_chat():
+    chat = chats.create_chat(GENERAL_CHAT_BUCKET)
+    return {"id": chat["id"], "title": chat["title"]}
+
+
+@app.get("/chats/{chat_id}")
+def get_general_chat(chat_id: str):
+    chat = chats.get_chat(GENERAL_CHAT_BUCKET, chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    return chat
+
+
+@app.delete("/chats/{chat_id}")
+def delete_general_chat(chat_id: str):
+    if not chats.delete_chat(GENERAL_CHAT_BUCKET, chat_id):
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    return {"success": True}
+
+
+# ── Sources ───────────────────────────────────────────────────────────────────
+
 def _file_size(name: str):
     if name.startswith(("http://", "https://")):
         return None
-
     try:
         path = UPLOAD_DIR / Path(name).name
         return path.stat().st_size if path.is_file() else None
@@ -166,27 +210,22 @@ def _file_size(name: str):
 @app.get("/sources")
 def get_sources():
     items = list_sources()
-
     for item in items:
         item["size_bytes"] = _file_size(item["name"])
-
     return {"sources": items}
 
 
 @app.get("/sources/content")
 def source_content(name: str, limit: int = 20):
     chunks = get_source_chunks(name, max(1, min(limit, 100)))
-
     if not chunks:
         raise HTTPException(status_code=404, detail="Source not found.")
-
     return {"name": name, "chunks": chunks}
 
 
 @app.delete("/sources")
 def remove_source(name: str):
     removed = delete_source(name)
-
     if removed == 0:
         raise HTTPException(status_code=404, detail="Source not found.")
 
@@ -196,16 +235,11 @@ def remove_source(name: str):
         except OSError:
             pass
 
-    # a deleted document must not stay linked to any classroom
     from_classrooms = classrooms.remove_source_everywhere(name)
-
     return {"success": True, "removed_chunks": removed, "removed_from_classrooms": from_classrooms}
 
 
-# ---------------------------------------------------------------------------
-# Classrooms: each classroom can only use the documents linked to it.
-# The allowed documents are always read from the server, never from the request.
-# ---------------------------------------------------------------------------
+# ── Classrooms ────────────────────────────────────────────────────────────────
 
 NOT_FOUND_IN_CLASSROOM = "I could not find this in the {name} Knowledge Base."
 
@@ -229,19 +263,16 @@ def get_classrooms():
 def classroom_documents(classroom_id: int):
     room = _classroom(classroom_id)
     allowed = set(classrooms.get_sources(classroom_id))
-
     items = [item for item in list_sources() if item["name"] in allowed]
     for item in items:
         item["size_bytes"] = _file_size(item["name"])
-
     return {"classroom": room, "documents": items}
 
 
 @app.post("/classrooms/{classroom_id}/documents")
 def import_documents(classroom_id: int, body: ImportRequest):
     _classroom(classroom_id)
-
-    names = list(dict.fromkeys(body.names))  # remove repeats, keep order
+    names = list(dict.fromkeys(body.names))
     if not names:
         raise HTTPException(status_code=400, detail="Select at least one document.")
 
@@ -260,28 +291,93 @@ def import_documents(classroom_id: int, body: ImportRequest):
 @app.delete("/classrooms/{classroom_id}/documents")
 def remove_classroom_document(classroom_id: int, name: str):
     _classroom(classroom_id)
-
-    # only the link is removed; the file, chunks and vectors stay in the Knowledge Base
     if not classrooms.remove_source(classroom_id, name):
         raise HTTPException(status_code=404, detail="Document is not in this classroom.")
-
     return {"success": True, "removed": name}
 
 
 @app.post("/classrooms/{classroom_id}/upload")
 async def classroom_upload(classroom_id: int, file: UploadFile = File(...)):
     _classroom(classroom_id)
-
-    # same pipeline as the main Knowledge Base, then link it to this classroom
     result = await upload_file(file)
     added, skipped = classrooms.add_sources(classroom_id, [result["filename"]])
     return {**result, "classroom_id": classroom_id, "added": added, "skipped": skipped}
 
 
+# NOTE: /classrooms/multi/ask must be registered BEFORE /classrooms/{classroom_id}/...
+# routes so FastAPI matches the static segment "multi" first.
+@app.get("/classrooms/multi/ask")
+def multi_classroom_ask(
+    classroom_ids: str,
+    question: str,
+    n_results: int = 3,
+    chat_id: str | None = None,
+):
+    """Ask across several classrooms with deduplication. Persists to the general chat bucket."""
+    question = question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is required.")
+
+    if chat_id is not None and chats.get_chat(GENERAL_CHAT_BUCKET, chat_id) is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+
+    try:
+        ids = [int(i.strip()) for i in classroom_ids.split(",") if i.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid classroom_ids.")
+
+    ids = [i for i in ids if classrooms.is_valid(i)]
+    if not ids:
+        raise HTTPException(status_code=400, detail="No valid classroom IDs.")
+
+    seen: set[str] = set()
+    unique_sources: list[str] = []
+    for cid in ids:
+        for src in classrooms.get_sources(cid):
+            if src not in seen:
+                seen.add(src)
+                unique_sources.append(src)
+
+    room_names = [classrooms.get_classroom(cid)["name"] for cid in ids]
+    scope = " + ".join(room_names)
+
+    try:
+        results = search(
+            question,
+            n_results=max(1, min(n_results, 10)),
+            sources=unique_sources,
+        )
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+
+        if documents:
+            answer = generate_answer(question, documents, scope=f"the {scope} Knowledge Base")
+            sources = sorted({m.get("source") for m in metadatas if m})
+        else:
+            answer = f"I could not find this in {scope}."
+            sources = []
+
+        if chat_id is not None:
+            chats.add_messages(
+                GENERAL_CHAT_BUCKET,
+                chat_id,
+                [{"role": "user", "text": question}, {"role": "ai", "text": answer}],
+            )
+
+        return {
+            "question": question,
+            "classroom_ids": ids,
+            "answer": answer,
+            "sources": sources,
+            "chat_id": chat_id,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
+
+
 @app.get("/classrooms/{classroom_id}/search")
 def classroom_search(classroom_id: int, query: str, n_results: int = 3):
     _classroom(classroom_id)
-
     query = query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query is required.")
@@ -315,19 +411,16 @@ def classroom_ask(
     chat_id: str | None = None,
 ):
     room = _classroom(classroom_id)
-
     question = question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required.")
 
-    # a chat id is only valid inside its own classroom
     if chat_id is not None and chats.get_chat(classroom_id, chat_id) is None:
         raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
 
     not_found = NOT_FOUND_IN_CLASSROOM.format(name=room["name"])
 
     try:
-        # an empty classroom searches nothing: there is no fallback to the main Knowledge Base
         results = search(
             question,
             n_results=max(1, min(n_results, 10)),
@@ -356,7 +449,6 @@ def classroom_ask(
             "answer": answer,
             "sources": sources,
         }
-
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
 
@@ -378,18 +470,14 @@ def new_classroom_chat(classroom_id: int):
 def get_classroom_chat(classroom_id: int, chat_id: str):
     _classroom(classroom_id)
     chat = chats.get_chat(classroom_id, chat_id)
-
     if chat is None:
         raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
-
     return chat
 
 
 @app.delete("/classrooms/{classroom_id}/chats/{chat_id}")
 def delete_classroom_chat(classroom_id: int, chat_id: str):
     _classroom(classroom_id)
-
     if not chats.delete_chat(classroom_id, chat_id):
         raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
-
     return {"success": True}

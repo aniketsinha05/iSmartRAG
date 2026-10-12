@@ -14,7 +14,6 @@ import "./App.css";
 import "./theme.css";
 import { fetchSources } from "./services/sourcesService";
 
-// Each page has a URL hash so a refresh (or Back/Forward) keeps you on it.
 const SLUGS: Record<Page, string> = {
   Dashboard: "home",
   "Knowledge Base": "knowledge-base",
@@ -24,35 +23,52 @@ const SLUGS: Record<Page, string> = {
   Classroom: "classroom",
 };
 
-// a classroom page has its own address: #/classroom/1 ... #/classroom/5
+// ── helpers ──────────────────────────────────────────────────────────────────
+
 function classroomIdFromHash(): number | null {
-  const match = window.location.hash.match(/^#\/classroom\/(\d+)/);
+  // only match /classroom/:id (not /classroom/:id/chat — that's the Chat page now)
+  const match = window.location.hash.match(/^#\/classroom\/(\d+)(?!\/chat)/);
   const id = match ? Number(match[1]) : null;
   return id !== null && id >= 1 && id <= 5 ? id : null;
 }
 
-// #/classroom/1/chat or #/classroom/1/documents (a refresh keeps the tab)
-function classroomTabFromHash(): "documents" | "chat" {
-  return /^#\/classroom\/\d+\/chat/.test(window.location.hash) ? "chat" : "documents";
-}
+
 
 function pageFromHash(): Page {
+  const hash = window.location.hash;
+
+  // /classroom/:id/chat → Chat page (classroom will be pre-selected)
+  if (/^#\/classroom\/\d+\/chat/.test(hash)) return "Chat";
+
+  // /chat or /chat/cr/...
+  if (/^#\/chat/.test(hash)) return "Chat";
+
   if (classroomIdFromHash() !== null) return "Classroom";
 
-  const slug = window.location.hash.replace(/^#\/?/, "");
+  const slug = hash.replace(/^#\/?/, "").split("/")[0];
   return (
-    (Object.keys(SLUGS) as Page[]).find(
-      (p) => SLUGS[p] === slug
-    ) ?? "Dashboard"
+    (Object.keys(SLUGS) as Page[]).find((p) => SLUGS[p] === slug) ??
+    "Dashboard"
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 function App() {
   const [page, setPageState] = useState<Page>(pageFromHash);
-  const [classroomId, setClassroomId] = useState<number | null>(classroomIdFromHash);
-  const [classroomTab, setClassroomTab] = useState(classroomTabFromHash);
+  const [classroomId, setClassroomId] = useState<number | null>(
+    classroomIdFromHash
+  );
+
 
   const setPage = useCallback((next: Page) => {
+    // Arriving at Chatbot from another page should open a new chat
+    if (next === "Chat" && pageFromHash() !== "Chat") {
+      try {
+        sessionStorage.setItem("mybookai-fresh-chat", "1");
+        localStorage.removeItem("mybookai-chat-scope");
+      } catch {}
+    }
     window.location.hash = `/${SLUGS[next]}`;
   }, []);
 
@@ -60,12 +76,12 @@ function App() {
     const onHashChange = () => {
       setPageState(pageFromHash());
       setClassroomId(classroomIdFromHash());
-      setClassroomTab(classroomTabFromHash());
+
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
-  // Sidebar starts open on desktop and closed on small screens.
+
   const [collapsed, setCollapsed] = useState(() => window.innerWidth <= 900);
   const [sources, setSources] = useState<Source[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
@@ -108,9 +124,17 @@ function App() {
         />
       )}
 
-      {page === "Chat" && <Chat setQuestionCount={setQuestionCount} />}
+      {page === "Chat" && (
+        <Chat setQuestionCount={setQuestionCount} />
+      )}
 
-      {page === "Quiz" && <Quiz quizCount={quizCount} sourceCount={sources.length} setPage={setPage} />}
+      {page === "Quiz" && (
+        <Quiz
+          quizCount={quizCount}
+          sourceCount={sources.length}
+          setPage={setPage}
+        />
+      )}
 
       {page === "Settings" && <Settings sourceCount={sources.length} />}
 
@@ -122,10 +146,6 @@ function App() {
         <ClassroomPage
           key={classroomId}
           classroomId={classroomId}
-          tab={classroomTab}
-          onTabChange={(next) => {
-            window.location.hash = `/classroom/${classroomId}/${next}`;
-          }}
           sources={sources}
           refreshSources={refreshSources}
           setPage={setPage}

@@ -3,7 +3,7 @@ import { menuItems } from "../../constants/navigation";
 
 const DISPLAY_NAME: Record<string, string> = {
   Dashboard: "Home",
-  Chat: "Search / Ask",
+  Chat: "Chatbot",
 };
 
 export default function Sidebar({

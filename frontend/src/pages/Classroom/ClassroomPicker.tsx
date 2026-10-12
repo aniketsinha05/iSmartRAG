@@ -99,10 +99,8 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div className="cr-card-icon">🏫</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <strong style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-            {room.name}
-          </strong>
-          <small style={{ display: "block", fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+          <strong className="cp-name">{room.name}</strong>
+          <small className="cp-count">
             {docs.length} document{docs.length === 1 ? "" : "s"}
           </small>
         </div>
@@ -164,7 +162,7 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
       </div>
 
       {message && (
-        <p style={{ fontSize: 12, color: "#3b5bb5", margin: 0 }}>{message}</p>
+        <p className="cp-msg">{message}</p>
       )}
 
       {/* Document list */}
@@ -177,30 +175,9 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {docs.map((doc) => (
-            <div
-              key={doc.name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 10px",
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                background: "#f9fafb",
-              }}
-            >
+            <div key={doc.name} className="cp-doc">
               <span style={{ fontSize: 16 }}>{TYPE_ICON[doc.type]}</span>
-              <span style={{
-                flex: 1,
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                fontSize: 13,
-                color: "#1f2937",
-              }}>
-                {doc.name}
-              </span>
+              <span className="cp-doc-name">{doc.name}</span>
               <span className="kb-type">{typeLabel(doc)}</span>
               <button
                 type="button"
@@ -239,7 +216,11 @@ export default function ClassroomPicker({
   }, [refreshSources]);
 
   const openChat = (id: number) => {
-    window.location.hash = `/classroom/${id}/chat`;
+    try {
+      sessionStorage.setItem("mybookai-fresh-chat", "1");
+      localStorage.setItem("mybookai-chat-scope", String(id));
+    } catch {}
+    window.location.hash = "/chat";
   };
 
   return (

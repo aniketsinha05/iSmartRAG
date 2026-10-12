@@ -749,3 +749,374 @@ body.dark-mode .ct-side-title {
     max-width: 90%;
   }
 }
+/* ── Classroom picker in Chat composer ──────────────────────────────────── */
+
+.ct-composer-wrap {
+  position: relative; /* needed for the picker's absolute positioning */
+}
+
+/* Badges row */
+.ct-badges {
+  width: min(860px, 100%);
+  margin: 0 auto 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 20px;
+}
+
+.ct-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #c5d3f0;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ct-badge button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ct-badge button:hover {
+  color: #b91c1c;
+}
+
+/* Picker dropdown */
+.ct-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 20px;
+  right: 20px;
+  max-width: min(860px, 100%);
+  margin: 0 auto;
+  z-index: 60;
+  background: #ffffff;
+  border: 1px solid #d5dbe7;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.14);
+  overflow: hidden;
+}
+
+.ct-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.ct-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1f2937;
+  transition: background 0.1s ease;
+}
+
+.ct-picker-item:hover {
+  background: #f6f9ff;
+}
+
+.ct-picker-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.ct-picker-clear {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: transparent;
+  color: #6b7280;
+  font-size: 12px;
+  text-align: left;
+}
+
+.ct-picker-clear:hover {
+  background: #f9fafb;
+  color: #1f2937;
+}
+
+/* + button inside the composer */
+.ct-scope-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: #9aa3b2;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ct-scope-btn:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+.ct-scope-btn.active {
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+/* Dark mode */
+body.dark-mode .ct-badge {
+  background: #1c2a47;
+  border-color: #2b3a5c;
+  color: #93c5fd;
+}
+
+body.dark-mode .ct-picker {
+  background: #1c1c1c;
+  border-color: #333333;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .ct-picker-head {
+  color: #9a9a9a;
+}
+
+body.dark-mode .ct-picker-item {
+  color: #f5f5f5;
+}
+
+body.dark-mode .ct-picker-item:hover {
+  background: #242424;
+}
+
+body.dark-mode .ct-picker-clear {
+  border-color: #2a2a2a;
+  color: #9a9a9a;
+}
+
+body.dark-mode .ct-picker-clear:hover {
+  background: #242424;
+  color: #f5f5f5;
+}
+
+body.dark-mode .ct-scope-btn:hover {
+  background: #242424;
+  color: #d4d4d4;
+}
+
+body.dark-mode .ct-scope-btn.active {
+  background: #1c2a47;
+  color: #93c5fd;
+}
+/* history rows: don't inherit the default button background */
+.ct-hist-main,
+.ct-hist-del {
+  background: transparent;
+}
+
+/* "New chat" text was dark-on-dark */
+body.dark-mode .ct-new {
+  color: #f5f5f5;
+}
+/* Classroom picker cards */
+.cp-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.cp-count {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cp-msg {
+  margin: 0;
+  font-size: 12px;
+  color: #3b5bb5;
+}
+
+.cp-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.cp-doc-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+body.dark-mode .cp-name,
+body.dark-mode .cp-doc-name {
+  color: #f5f5f5;
+}
+
+body.dark-mode .cp-count {
+  color: #9a9a9a;
+}
+
+body.dark-mode .cp-msg {
+  color: #93c5fd;
+}
+
+body.dark-mode .cp-doc {
+  background: #202020;
+  border-color: #333333;
+}
+
+/* User chip in the topbar */
+.topbar-user {
+  padding: 4px 14px 4px 4px;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.topbar-user:hover {
+  background: #f1f5f9;
+}
+
+body.dark-mode .topbar-user:hover {
+  background: #242424;
+}
+
+body.dark-mode .topbar-name {
+  color: #f5f5f5;
+}
+
+/* Chatbot info tooltip */
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tt-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tt-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: #6b7280;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tt-btn:hover,
+.tt-btn:focus-visible {
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+.tt-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 80;
+  width: min(360px, 80vw);
+  padding: 14px 16px;
+  border: 1px solid #d5dbe7;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.14);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.tt-wrap:hover .tt-pop,
+.tt-wrap:focus-within .tt-pop {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.tt-pop strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tt-pop ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tt-pop li {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.tt-pop li b {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+body.dark-mode .tt-btn {
+  color: #9a9a9a;
+}
+
+body.dark-mode .tt-btn:hover,
+body.dark-mode .tt-btn:focus-visible {
+  background: #1c2a47;
+  color: #93c5fd;
+}
+
+body.dark-mode .tt-pop {
+  background: #1c1c1c;
+  border-color: #333333;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .tt-pop li {
+  color: #bdbdbd;
+}
+
+body.dark-mode .tt-pop li b {
+  color: #f5f5f5;
+}
