@@ -1,32 +1,29 @@
-"""
-classrooms.py
-5 fixed classrooms. A classroom only stores the NAMES of the documents (the `source`
-values in the vector store) it can use. No file, chunk or vector is ever copied.
-"""
-
 import json
 import os
 import threading
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 PATH = os.path.join(BASE, "classrooms.json")
-COUNT = 5
-
+MAX_CLASSROOMS = 20
 _lock = threading.Lock()
 
 
 def _default():
-    return {str(i): {"name": f"Classroom {i}", "sources": []} for i in range(1, COUNT + 1)}
+    return {
+        **{str(i): {"name": f"Classroom {i}", "sources": []} for i in range(1, 6)},
+        "_next_id": 6,
+    }
 
 
 def _load():
-    data = _default()
-    if os.path.exists(PATH):
-        with open(PATH, encoding="utf-8") as f:
-            saved = json.load(f)
-        for key in data:
-            if key in saved:
-                data[key].update(saved[key])
+    if not os.path.exists(PATH):
+        return _default()
+
+    with open(PATH, encoding="utf-8") as f:
+        data = json.load(f)
+
+    ids = [int(k) for k in data if k.isdigit()]
+    data.setdefault("_next_id", max(ids, default=0) + 1)
     return data
 
 
@@ -35,65 +32,138 @@ def _save(data):
         json.dump(data, f, indent=2)
 
 
+def _valid_name(name):
+    return isinstance(name, str) and 1 <= len(name.strip()) <= 40
+
+
+def _unique_name(data, name, exclude=None):
+    return not any(
+        k.isdigit() and int(k) != exclude
+        and item["name"].strip().casefold() == name.strip().casefold()
+        for k, item in data.items()
+    )
+
+
 def is_valid(classroom_id):
-    return isinstance(classroom_id, int) and 1 <= classroom_id <= COUNT
+    if not isinstance(classroom_id, int):
+        return False
+    with _lock:
+        return str(classroom_id) in _load()
 
 
 def get_classroom(classroom_id):
     with _lock:
-        item = _load()[str(classroom_id)]
-    return {"id": classroom_id, "name": item["name"], "document_count": len(item["sources"])}
+        item = _load().get(str(classroom_id))
+        return (
+            {"id": classroom_id, "name": item["name"],
+             "document_count": len(item["sources"])}
+            if item else None
+        )
 
 
 def list_classrooms():
     with _lock:
         data = _load()
     return [
-        {"id": int(key), "name": item["name"], "document_count": len(item["sources"])}
-        for key, item in data.items()
+        {"id": int(k), "name": v["name"], "document_count": len(v["sources"])}
+        for k, v in data.items() if k.isdigit()
     ]
+
+
+def create_classroom(name):
+    if not _valid_name(name):
+        return None, "Name must be 1–40 characters."
+
+    name = name.strip()
+    with _lock:
+        data = _load()
+        if sum(k.isdigit() for k in data) >= MAX_CLASSROOMS:
+            return None, "Maximum of 20 classrooms reached."
+        if not _unique_name(data, name):
+            return None, "A classroom with this name already exists."
+
+        classroom_id = data["_next_id"]
+        data[str(classroom_id)] = {"name": name, "sources": []}
+        data["_next_id"] = classroom_id + 1
+        _save(data)
+
+    return classroom_id, None
+
+
+def rename_classroom(classroom_id, name):
+    if not _valid_name(name):
+        return False, "Name must be 1–40 characters."
+
+    name = name.strip()
+    with _lock:
+        data = _load()
+        key = str(classroom_id)
+        if key not in data:
+            return False, "Classroom not found."
+        if not _unique_name(data, name, classroom_id):
+            return False, "A classroom with this name already exists."
+
+        data[key]["name"] = name
+        _save(data)
+
+    return True, None
+
+
+def delete_classroom(classroom_id):
+    with _lock:
+        data = _load()
+        if str(classroom_id) not in data:
+            return False
+
+        del data[str(classroom_id)]
+        _save(data)
+    return True
 
 
 def get_sources(classroom_id):
     with _lock:
-        return list(_load()[str(classroom_id)]["sources"])
+        item = _load().get(str(classroom_id))
+        return list(item["sources"]) if item else []
 
 
 def add_sources(classroom_id, names):
-    """Returns (added, skipped). Names already in the classroom are skipped (no duplicates)."""
     added, skipped = [], []
     with _lock:
         data = _load()
-        sources = data[str(classroom_id)]["sources"]
+        item = data.get(str(classroom_id))
+        if not item:
+            return added, list(names)
+
         for name in names:
-            if name in sources:
+            if name in item["sources"]:
                 skipped.append(name)
             else:
-                sources.append(name)
+                item["sources"].append(name)
                 added.append(name)
+
         if added:
             _save(data)
+
     return added, skipped
 
 
 def remove_source(classroom_id, name):
     with _lock:
         data = _load()
-        sources = data[str(classroom_id)]["sources"]
-        if name not in sources:
+        item = data.get(str(classroom_id))
+        if not item or name not in item["sources"]:
             return False
-        sources.remove(name)
+        item["sources"].remove(name)
         _save(data)
     return True
 
 
 def remove_source_everywhere(name):
-    """Used when a document is permanently deleted from the main Knowledge Base."""
     count = 0
     with _lock:
         data = _load()
-        for item in data.values():
-            if name in item["sources"]:
+        for key, item in data.items():
+            if key.isdigit() and name in item["sources"]:
                 item["sources"].remove(name)
                 count += 1
         if count:
