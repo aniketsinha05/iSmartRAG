@@ -203,16 +203,18 @@ export default function ClassroomPage({
 
       {/* Toolbar — documents count + Chat shortcut */}
       <div className="kb-toolbar">
-        <span style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>
-          Documents ({docs.length})
-        </span>
+        <span className="cp-name">Documents ({docs.length})</span>
 
         <button
           type="button"
           className="hm-primary hm-small"
           style={{ marginLeft: "auto" }}
           onClick={() => {
-            window.location.hash = `/chat/cr/${classroomId}`;
+            try {
+              sessionStorage.setItem("mybookai-fresh-chat", "1");
+              localStorage.setItem("mybookai-chat-scope", String(classroomId));
+            } catch {}
+            window.location.hash = "/chat";
           }}
         >
           💬 Chat with {roomName}

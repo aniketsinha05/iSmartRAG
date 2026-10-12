@@ -19,6 +19,21 @@ const SUGGESTIONS = [
 ];
 
 const ACTIVE_CHAT_KEY = "mybookai-active-chat";
+const FRESH_CHAT_KEY = "mybookai-fresh-chat";
+const NEW_CHAT = "__new__"; // saved when a blank chat is open
+
+const SCOPE_KEY = "mybookai-chat-scope";
+
+const readScope = (): number[] => {
+  try {
+    return (localStorage.getItem(SCOPE_KEY) ?? "")
+      .split(",")
+      .map(Number)
+      .filter((n) => n >= 1 && n <= 5);
+  } catch {
+    return [];
+  }
+};
 
 const readActiveChat = (): string | null => {
   try { return localStorage.getItem(ACTIVE_CHAT_KEY); } catch { return null; }
@@ -39,10 +54,8 @@ function formatWhen(iso: string): string {
 
 export default function Chat({
   setQuestionCount,
-  initialClassroomIds = [],
 }: {
   setQuestionCount: Dispatch<SetStateAction<number>>;
-  initialClassroomIds?: number[];
 }) {
   // ── messages / loading ───────────────────────────────────────────────────
   const [messages, setMessages] = useState<Message[]>([]);
@@ -56,7 +69,7 @@ export default function Chat({
   const [ready, setReady]       = useState(false);   // true once initial load done
 
   // ── classroom picker ─────────────────────────────────────────────────────
-  const [classroomIds, setClassroomIds]               = useState<number[]>(initialClassroomIds);
+  const [classroomIds, setClassroomIds]               = useState<number[]>(readScope);
   const [availableClassrooms, setAvailableClassrooms] = useState<Classroom[]>([]);
   const [showPicker, setShowPicker]                   = useState(false);
 
@@ -85,10 +98,23 @@ export default function Chat({
         setChatList(list);
 
         // auto-load the most recent chat
+        // Arriving from another page: open a new chat instead of restoring one
+        let fresh = false;
+        try {
+          fresh = sessionStorage.getItem(FRESH_CHAT_KEY) === "1";
+          sessionStorage.removeItem(FRESH_CHAT_KEY);
+        } catch {}
+
+        if (fresh) {
+          writeActiveChat(NEW_CHAT);
+          return;
+        }
+
         // Coming from "Chat with <classroom>" should start fresh
-        if (initialClassroomIds.length > 0 || list.length === 0) return;
+        if (list.length === 0) return;
 
         const saved = readActiveChat();
+        if (saved === NEW_CHAT) return; // a blank chat was open, keep it blank
         const target = list.find((c) => c.id === saved) ?? list[0];
 
         const chat = await fetchGeneralChat(target.id);
@@ -108,14 +134,16 @@ export default function Chat({
 
   // ── when navigating here from a classroom, reset scope (keep history) ────
   // eslint-disable-next-line react-hooks/exhaustive-deps
+    // keep the selected classrooms across refresh
   useEffect(() => {
-    setClassroomIds(initialClassroomIds);
-    // Start a fresh message view, but keep chatId null so the next send
-    // creates a new session. The sidebar still shows old chats.
-    setChatId(null);
-    setMessages([]);
-    setInput("");
-  }, [initialClassroomIds.join(",")]);
+    try {
+      if (classroomIds.length > 0) {
+        localStorage.setItem(SCOPE_KEY, classroomIds.join(","));
+      } else {
+        localStorage.removeItem(SCOPE_KEY);
+      }
+    } catch {}
+  }, [classroomIds]);
 
   // ── close picker on outside click ────────────────────────────────────────
   useEffect(() => {
@@ -218,7 +246,7 @@ export default function Chat({
       if (chat.id === chatId) {
         setChatId(null);
         setMessages([]);
-        writeActiveChat(null);
+        writeActiveChat(NEW_CHAT);
       }
       await refreshChatList();
     } catch (err) {
@@ -228,7 +256,7 @@ export default function Chat({
 
   const newChat = () => {
     setChatId(null);
-    writeActiveChat(null);
+    writeActiveChat(NEW_CHAT);
     setMessages([]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";

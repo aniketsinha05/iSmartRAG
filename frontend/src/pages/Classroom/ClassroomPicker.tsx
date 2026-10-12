@@ -216,7 +216,11 @@ export default function ClassroomPicker({
   }, [refreshSources]);
 
   const openChat = (id: number) => {
-    window.location.hash = `/chat/cr/${id}`;
+    try {
+      sessionStorage.setItem("mybookai-fresh-chat", "1");
+      localStorage.setItem("mybookai-chat-scope", String(id));
+    } catch {}
+    window.location.hash = "/chat";
   };
 
   return (

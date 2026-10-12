@@ -32,28 +32,7 @@ function classroomIdFromHash(): number | null {
   return id !== null && id >= 1 && id <= 5 ? id : null;
 }
 
-/** Pre-selected classroom IDs for the Chat page. */
-function chatClassroomIdsFromHash(): number[] {
-  const hash = window.location.hash;
 
-  // /chat/cr/1,2,3
-  const chatMatch = hash.match(/^#\/chat\/cr\/([0-9,]+)/);
-  if (chatMatch) {
-    return chatMatch[1]
-      .split(",")
-      .map(Number)
-      .filter((n) => n >= 1 && n <= 5);
-  }
-
-  // Legacy /classroom/:id/chat  → treat as classroom pre-selected
-  const crChatMatch = hash.match(/^#\/classroom\/(\d+)\/chat/);
-  if (crChatMatch) {
-    const id = Number(crChatMatch[1]);
-    return id >= 1 && id <= 5 ? [id] : [];
-  }
-
-  return [];
-}
 
 function pageFromHash(): Page {
   const hash = window.location.hash;
@@ -80,11 +59,16 @@ function App() {
   const [classroomId, setClassroomId] = useState<number | null>(
     classroomIdFromHash
   );
-  const [chatClassroomIds, setChatClassroomIds] = useState<number[]>(
-    chatClassroomIdsFromHash
-  );
+
 
   const setPage = useCallback((next: Page) => {
+    // Arriving at Chatbot from another page should open a new chat
+    if (next === "Chat" && pageFromHash() !== "Chat") {
+      try {
+        sessionStorage.setItem("mybookai-fresh-chat", "1");
+        localStorage.removeItem("mybookai-chat-scope");
+      } catch {}
+    }
     window.location.hash = `/${SLUGS[next]}`;
   }, []);
 
@@ -92,7 +76,7 @@ function App() {
     const onHashChange = () => {
       setPageState(pageFromHash());
       setClassroomId(classroomIdFromHash());
-      setChatClassroomIds(chatClassroomIdsFromHash());
+
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -141,10 +125,7 @@ function App() {
       )}
 
       {page === "Chat" && (
-        <Chat
-          setQuestionCount={setQuestionCount}
-          initialClassroomIds={chatClassroomIds}
-        />
+        <Chat setQuestionCount={setQuestionCount} />
       )}
 
       {page === "Quiz" && (
