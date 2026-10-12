@@ -1,7 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { Message } from "../../types";
+import type { ChatSummary, Message } from "../../types";
 import { askQuestion } from "../../services/askService";
+import {
+  askClassroom,
+  createChat,
+  deleteChat,
+  fetchChat,
+  fetchChats,
+} from "../../services/classroomService";
+
+function formatWhen(iso: string): string {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 const SUGGESTIONS = [
   {
@@ -24,10 +42,19 @@ const SUGGESTIONS = [
 
 export default function Chat({
   setQuestionCount,
+  classroom,
 }: {
   setQuestionCount: Dispatch<SetStateAction<number>>;
+  // when set, the chat only uses the documents of this classroom
+  classroom?: { id: number; name: string };
 }) {
+  const classroomId = classroom?.id;
   const [messages, setMessages] = useState<Message[]>([]);
+  // classroom chats are saved on the backend: the open chat and the list of saved chats
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [ready, setReady] = useState(classroomId === undefined);
+  const [notice, setNotice] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
@@ -38,6 +65,54 @@ export default function Chat({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // opening a classroom chat loads its saved chats from the backend (newest one opens)
+  useEffect(() => {
+    if (classroomId === undefined) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const list = (await fetchChats(classroomId)).filter(
+          (c) => c.messageCount > 0
+        );
+
+        if (cancelled) return;
+        setChats(list);
+
+        if (list.length > 0) {
+          const chat = await fetchChat(classroomId, list[0].id);
+
+          if (cancelled) return;
+          setChatId(chat.id);
+          setMessages(chat.messages);
+        }
+      } catch (error) {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice("Could not load the saved chats. Is the backend running?");
+        }
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [classroomId]);
+
+  const refreshChats = async () => {
+    if (classroomId === undefined) return;
+
+    try {
+      setChats((await fetchChats(classroomId)).filter((c) => c.messageCount > 0));
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const resize = () => {
     const el = inputRef.current;
@@ -60,7 +135,17 @@ export default function Chat({
     });
 
     try {
-      const data = await askQuestion(question, 5);
+      let activeChat = chatId;
+
+      // the chat is created on the backend with the first question
+      if (classroom && !activeChat) {
+        activeChat = (await createChat(classroom.id)).id;
+        setChatId(activeChat);
+      }
+
+      const data = classroom
+        ? await askClassroom(classroom.id, question, 5, activeChat ?? undefined)
+        : await askQuestion(question, 5);
 
       setMessages((current) => [
         ...current,
@@ -68,7 +153,9 @@ export default function Chat({
           role: "ai",
           text:
             data.answer ||
-            "I couldn't find an answer in your knowledge base.",
+            (classroom
+              ? `I couldn't find an answer in ${classroom.name}.`
+              : "I couldn't find an answer in your knowledge base."),
         },
       ]);
     } catch (error) {
@@ -80,6 +167,7 @@ export default function Chat({
           text: "I couldn't reach the backend. Check that it's running, then try again.",
         },
       ]);
+      refreshChats();
     } finally {
       setLoading(false);
     }
@@ -95,8 +183,44 @@ export default function Chat({
     }
   };
 
+  const openChat = async (id: string) => {
+    if (classroomId === undefined || id === chatId || loading) return;
+
+    try {
+      const chat = await fetchChat(classroomId, id);
+      setChatId(chat.id);
+      setMessages(chat.messages);
+      setNotice("");
+    } catch (error) {
+      console.error(error);
+      setNotice("Could not open that chat.");
+    }
+  };
+
+  const removeChat = async (chat: ChatSummary) => {
+    if (classroomId === undefined) return;
+
+    if (!window.confirm(`Delete the chat "${chat.title}"?`)) return;
+
+    try {
+      await deleteChat(classroomId, chat.id);
+
+      if (chat.id === chatId) {
+        setChatId(null);
+        setMessages([]);
+      }
+
+      await refreshChats();
+    } catch (error) {
+      console.error(error);
+      setNotice("Could not delete the chat.");
+    }
+  };
+
   const newChat = () => {
+    setChatId(null);
     setMessages([]);
+    setNotice("");
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
   };
@@ -115,7 +239,36 @@ export default function Chat({
 
         <span className="ct-side-title">Recent</span>
 
-        {firstQuestion ? (
+        {classroom ? (
+          chats.length === 0 ? (
+            <p className="ct-empty">No saved chats yet.</p>
+          ) : (
+            chats.map((chat) => (
+              <div
+                key={chat.id}
+                className={`ct-hist ${chat.id === chatId ? "active" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="ct-hist-main"
+                  onClick={() => openChat(chat.id)}
+                >
+                  <strong>{chat.title}</strong>
+                  <small>{formatWhen(chat.updatedAt)}</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="ct-hist-del"
+                  aria-label="Delete chat"
+                  onClick={() => removeChat(chat)}
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )
+        ) : firstQuestion ? (
           <div className="ct-item">
             <strong>{firstQuestion}</strong>
             <small>Current conversation</small>
@@ -127,13 +280,18 @@ export default function Chat({
 
       <div className="ct-main">
         <div className="ct-scroll">
-          {messages.length === 0 ? (
+          {!ready && messages.length === 0 ? (
+            <div className="ct-welcome">
+              <p>Loading chats...</p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="ct-welcome">
               <div className="ct-logo">iS</div>
               <h2>How can I help you today?</h2>
               <p>
-                Ask a question and I'll answer from the documents and websites
-                in your knowledge base.
+                {classroom
+                  ? `Ask a question and I'll answer only from the documents added to ${classroom.name}.`
+                  : "Ask a question and I'll answer from the documents and websites in your knowledge base."}
               </p>
 
               <div className="ct-suggest">
@@ -204,7 +362,11 @@ export default function Chat({
               ref={inputRef}
               rows={1}
               value={input}
-              placeholder="Ask anything about your knowledge base..."
+              placeholder={
+                classroom
+                  ? `Ask anything about ${classroom.name}...`
+                  : "Ask anything about your knowledge base..."
+              }
               onChange={(event) => {
                 setInput(event.target.value);
                 resize();
@@ -230,9 +392,13 @@ export default function Chat({
             </button>
           </div>
 
+          {notice && <p className="ct-note">{notice}</p>}
+
           <p className="ct-note">
-            Answers are generated from your indexed sources. Enter to send,
-            Shift+Enter for a new line.
+            {classroom
+              ? `Answers use only the documents in ${classroom.name}. `
+              : "Answers are generated from your indexed sources. "}
+            Enter to send, Shift+Enter for a new line.
           </p>
         </div>
       </div>
