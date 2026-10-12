@@ -4,10 +4,8 @@ import threading
 
 import faiss
 import numpy as np
-import torch
 from datetime import datetime, timezone
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from transformers import AutoModel, AutoTokenizer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE, "faiss_db")
@@ -20,8 +18,7 @@ DIM = 384
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
-_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-_model = AutoModel.from_pretrained(MODEL_NAME).eval()
+_models = {}  # the bge model is loaded the first time it is needed
 _splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=120)
 _lock = threading.Lock()
 
@@ -30,18 +27,31 @@ def _empty():
     return np.zeros((0, DIM), dtype="float32")
 
 
+def _get_model():
+    if not _models:
+        from transformers import AutoModel, AutoTokenizer
+
+        _models["tokenizer"] = AutoTokenizer.from_pretrained(MODEL_NAME)
+        _models["model"] = AutoModel.from_pretrained(MODEL_NAME).eval()
+    return _models["tokenizer"], _models["model"]
+
+
 def _embed(texts, is_query=False):
+    import torch
+
+    tokenizer, model = _get_model()
+
     if is_query:
         texts = [QUERY_PREFIX + t for t in texts]
 
     out = []
     with torch.no_grad():
         for i in range(0, len(texts), 32):
-            batch = _tokenizer(
+            batch = tokenizer(
                 texts[i:i + 32], padding=True, truncation=True,
                 max_length=512, return_tensors="pt",
             )
-            cls = _model(**batch).last_hidden_state[:, 0]  # bge uses the [CLS] vector
+            cls = model(**batch).last_hidden_state[:, 0]  # bge uses the [CLS] vector
             out.append(torch.nn.functional.normalize(cls, dim=1))
 
     return torch.cat(out).numpy().astype("float32")
@@ -123,9 +133,17 @@ def _meta(r):
     return {k: v for k, v in r.items() if k not in ("id", "text", "model")}
 
 
-def search(query, n_results=3):
+def search(query, n_results=3, sources=None):
+    """sources=None searches everything. A list limits the search to those documents
+    (an empty list returns nothing). This is how classrooms stay isolated."""
     with _lock:
         records, vecs = _load()
+
+    if sources is not None:
+        allowed = set(sources)
+        keep = [i for i, r in enumerate(records) if r["source"] in allowed]
+        records = [records[i] for i in keep]
+        vecs = vecs[keep] if keep else _empty()
 
     if not records:
         return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
