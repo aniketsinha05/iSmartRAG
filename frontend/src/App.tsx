@@ -8,6 +8,7 @@ import Chat from "./pages/Chat/Chat";
 import Quiz from "./pages/Quiz/Quiz";
 import Settings from "./pages/Settings/Settings";
 import ClassroomPage from "./pages/Classroom/Classroom";
+import ClassroomPicker from "./pages/Classroom/ClassroomPicker";
 
 import "./App.css";
 import "./theme.css";
@@ -41,7 +42,7 @@ function pageFromHash(): Page {
   const slug = window.location.hash.replace(/^#\/?/, "");
   return (
     (Object.keys(SLUGS) as Page[]).find(
-      (p) => p !== "Classroom" && SLUGS[p] === slug
+      (p) => SLUGS[p] === slug
     ) ?? "Dashboard"
   );
 }
@@ -112,6 +113,10 @@ function App() {
       {page === "Quiz" && <Quiz quizCount={quizCount} sourceCount={sources.length} setPage={setPage} />}
 
       {page === "Settings" && <Settings sourceCount={sources.length} />}
+
+      {page === "Classroom" && classroomId === null && (
+        <ClassroomPicker sources={sources} refreshSources={refreshSources} />
+      )}
 
       {page === "Classroom" && classroomId !== null && (
         <ClassroomPage
