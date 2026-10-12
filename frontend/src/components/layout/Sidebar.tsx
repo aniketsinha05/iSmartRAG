@@ -1,5 +1,6 @@
 import type { Page } from "../../types";
 import { menuItems } from "../../constants/navigation";
+import vioraLogo from "../../assets/viora glowing logo.png";
 
 const DISPLAY_NAME: Record<string, string> = {
   Dashboard: "Home",
@@ -21,11 +22,22 @@ export default function Sidebar({
     <>
       <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
         <div className="sidebar-brand">
-          <div className="brand-mark small">iS</div>
+          <img
+            src={vioraLogo}
+            alt="VIORA logo"
+            style={{           
+              width: "52px",
+              height: "52px",
+              objectFit: "contain",
+              background: "transparent",
+              padding: 0,
+              borderRadius: 0,
+            }}
+          />
 
           <div className="sidebar-brand-text">
-            <strong>MyBookAI</strong>
-            <span>Learning Assistant</span>
+            <strong>VIORA</strong>
+            <span>Your Personal Assistant</span>
           </div>
         </div>
 
