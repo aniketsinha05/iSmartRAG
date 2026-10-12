@@ -5,7 +5,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from backend import classrooms
+from backend import chats, classrooms
 from backend.vector_store import (
     add_pieces,
     delete_source,
@@ -308,12 +308,21 @@ def classroom_search(classroom_id: int, query: str, n_results: int = 3):
 
 
 @app.get("/classrooms/{classroom_id}/ask")
-def classroom_ask(classroom_id: int, question: str, n_results: int = 3):
+def classroom_ask(
+    classroom_id: int,
+    question: str,
+    n_results: int = 3,
+    chat_id: str | None = None,
+):
     room = _classroom(classroom_id)
 
     question = question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required.")
+
+    # a chat id is only valid inside its own classroom
+    if chat_id is not None and chats.get_chat(classroom_id, chat_id) is None:
+        raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
 
     not_found = NOT_FOUND_IN_CLASSROOM.format(name=room["name"])
 
@@ -327,13 +336,60 @@ def classroom_ask(classroom_id: int, question: str, n_results: int = 3):
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
 
-        if not documents:
-            return {"question": question, "classroom_id": classroom_id, "answer": not_found, "sources": []}
+        if documents:
+            answer = generate_answer(question, documents, scope=f"the {room['name']} Knowledge Base")
+            sources = sorted({m.get("source") for m in metadatas if m})
+        else:
+            answer, sources = not_found, []
 
-        answer = generate_answer(question, documents, scope=f"the {room['name']} Knowledge Base")
-        sources = sorted({m.get("source") for m in metadatas if m})
+        if chat_id is not None:
+            chats.add_messages(
+                classroom_id,
+                chat_id,
+                [{"role": "user", "text": question}, {"role": "ai", "text": answer}],
+            )
 
-        return {"question": question, "classroom_id": classroom_id, "answer": answer, "sources": sources}
+        return {
+            "question": question,
+            "classroom_id": classroom_id,
+            "chat_id": chat_id,
+            "answer": answer,
+            "sources": sources,
+        }
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
+
+
+@app.get("/classrooms/{classroom_id}/chats")
+def classroom_chats(classroom_id: int):
+    _classroom(classroom_id)
+    return {"chats": chats.list_chats(classroom_id)}
+
+
+@app.post("/classrooms/{classroom_id}/chats")
+def new_classroom_chat(classroom_id: int):
+    _classroom(classroom_id)
+    chat = chats.create_chat(classroom_id)
+    return {"id": chat["id"], "title": chat["title"]}
+
+
+@app.get("/classrooms/{classroom_id}/chats/{chat_id}")
+def get_classroom_chat(classroom_id: int, chat_id: str):
+    _classroom(classroom_id)
+    chat = chats.get_chat(classroom_id, chat_id)
+
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
+
+    return chat
+
+
+@app.delete("/classrooms/{classroom_id}/chats/{chat_id}")
+def delete_classroom_chat(classroom_id: int, chat_id: str):
+    _classroom(classroom_id)
+
+    if not chats.delete_chat(classroom_id, chat_id):
+        raise HTTPException(status_code=404, detail="Chat not found in this classroom.")
+
+    return {"success": True}

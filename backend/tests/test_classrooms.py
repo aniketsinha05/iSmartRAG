@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+import backend.chats as chats
 import backend.classrooms as cr
 import backend.main as main
 import backend.vector_store as vs
@@ -54,6 +55,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(vs, "INDEX_PATH", str(tmp_path / "index.faiss"))
     monkeypatch.setattr(vs, "_embed", fake_embed)
     monkeypatch.setattr(cr, "PATH", str(tmp_path / "classrooms.json"))
+    monkeypatch.setattr(chats, "PATH", str(tmp_path / "chats.json"))
     monkeypatch.setattr(main, "UPLOAD_DIR", tmp_path)
 
     llm = FakeLLM()
@@ -206,3 +208,73 @@ def test_upload_into_classroom(env):
 def test_five_classrooms(env):
     rooms = env.get("/classrooms").json()["classrooms"]
     assert [r["name"] for r in rooms] == [f"Classroom {i}" for i in range(1, 6)]
+
+
+# ---- chat history is saved on the backend, per classroom -------------------------------
+def new_chat(client, classroom_id):
+    r = client.post(f"/classrooms/{classroom_id}/chats")
+    assert r.status_code == 200
+    return r.json()["id"]
+
+
+def test_chat_is_saved_and_loaded(env):
+    import_docs(env, 1, ["A.txt"])
+    chat_id = new_chat(env, 1)
+
+    r = env.get("/classrooms/1/ask", params={"question": "alpha apples", "chat_id": chat_id})
+    assert r.status_code == 200 and r.json()["chat_id"] == chat_id
+    env.get("/classrooms/1/ask", params={"question": "alpha harvest", "chat_id": chat_id})
+
+    chat = env.get(f"/classrooms/1/chats/{chat_id}").json()
+    assert [m["role"] for m in chat["messages"]] == ["user", "ai", "user", "ai"]
+    assert chat["messages"][0]["text"] == "alpha apples"
+    assert chat["title"] == "alpha apples"
+
+    listing = env.get("/classrooms/1/chats").json()["chats"]
+    assert [c["id"] for c in listing] == [chat_id] and listing[0]["message_count"] == 4
+
+    # asking without a chat id does not save anything
+    env.get("/classrooms/1/ask", params={"question": "alpha apples"})
+    assert len(env.get(f"/classrooms/1/chats/{chat_id}").json()["messages"]) == 4
+
+
+def test_chats_belong_to_one_classroom(env):
+    chat_id = new_chat(env, 1)
+
+    assert env.get("/classrooms/2/chats").json()["chats"] == []
+    assert env.get(f"/classrooms/2/chats/{chat_id}").status_code == 404
+    assert env.delete(f"/classrooms/2/chats/{chat_id}").status_code == 404
+
+    # a chat of Classroom 1 cannot be used to ask in Classroom 2
+    r = env.get("/classrooms/2/ask", params={"question": "alpha", "chat_id": chat_id})
+    assert r.status_code == 404
+    assert env.llm.calls == []
+    assert env.get(f"/classrooms/1/chats/{chat_id}").json()["messages"] == []
+
+
+def test_delete_chat_and_removing_documents_keeps_chats(env):
+    import_docs(env, 1, ["A.txt"])
+    chat_id = new_chat(env, 1)
+    env.get("/classrooms/1/ask", params={"question": "alpha apples", "chat_id": chat_id})
+
+    # removing a document from the classroom does not delete the chat history
+    env.delete("/classrooms/1/documents", params={"name": "A.txt"})
+    assert len(env.get(f"/classrooms/1/chats/{chat_id}").json()["messages"]) == 2
+
+    assert env.delete(f"/classrooms/1/chats/{chat_id}").status_code == 200
+    assert env.get("/classrooms/1/chats").json()["chats"] == []
+
+
+def test_chat_in_empty_classroom_is_saved_with_not_found_answer(env):
+    chat_id = new_chat(env, 3)
+    r = env.get("/classrooms/3/ask", params={"question": "alpha", "chat_id": chat_id})
+
+    assert "could not find" in r.json()["answer"].lower()
+    assert len(env.get(f"/classrooms/3/chats/{chat_id}").json()["messages"]) == 2
+    assert env.llm.calls == []
+
+
+@pytest.mark.parametrize("bad_id", [0, 6])
+def test_chat_endpoints_reject_invalid_classroom(env, bad_id):
+    assert env.get(f"/classrooms/{bad_id}/chats").status_code == 404
+    assert env.post(f"/classrooms/{bad_id}/chats").status_code == 404
