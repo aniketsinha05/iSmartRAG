@@ -5,5 +5,6 @@ export const menuItems: { label: Page; icon: string }[] = [
   { label: "Knowledge Base", icon: "▣" },
   { label: "Chat", icon: "◌" },
   { label: "Quiz", icon: "✓" },
+  { label: "Classroom", icon: "🏫" },
   { label: "Settings", icon: "⚙" },
 ];
