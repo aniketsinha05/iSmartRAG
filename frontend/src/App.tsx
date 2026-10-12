@@ -7,6 +7,7 @@ import AppShell from "./components/layout/AppShell";
 import Chat from "./pages/Chat/Chat";
 import Quiz from "./pages/Quiz/Quiz";
 import Settings from "./pages/Settings/Settings";
+import ClassroomPage from "./pages/Classroom/Classroom";
 
 import "./App.css";
 import "./theme.css";
@@ -19,22 +20,47 @@ const SLUGS: Record<Page, string> = {
   Chat: "chat",
   Quiz: "quiz",
   Settings: "settings",
+  Classroom: "classroom",
 };
 
+// a classroom page has its own address: #/classroom/1 ... #/classroom/5
+function classroomIdFromHash(): number | null {
+  const match = window.location.hash.match(/^#\/classroom\/(\d+)/);
+  const id = match ? Number(match[1]) : null;
+  return id !== null && id >= 1 && id <= 5 ? id : null;
+}
+
+// #/classroom/1/chat or #/classroom/1/documents (a refresh keeps the tab)
+function classroomTabFromHash(): "documents" | "chat" {
+  return /^#\/classroom\/\d+\/chat/.test(window.location.hash) ? "chat" : "documents";
+}
+
 function pageFromHash(): Page {
+  if (classroomIdFromHash() !== null) return "Classroom";
+
   const slug = window.location.hash.replace(/^#\/?/, "");
-  return (Object.keys(SLUGS) as Page[]).find((p) => SLUGS[p] === slug) ?? "Dashboard";
+  return (
+    (Object.keys(SLUGS) as Page[]).find(
+      (p) => p !== "Classroom" && SLUGS[p] === slug
+    ) ?? "Dashboard"
+  );
 }
 
 function App() {
   const [page, setPageState] = useState<Page>(pageFromHash);
+  const [classroomId, setClassroomId] = useState<number | null>(classroomIdFromHash);
+  const [classroomTab, setClassroomTab] = useState(classroomTabFromHash);
 
   const setPage = useCallback((next: Page) => {
     window.location.hash = `/${SLUGS[next]}`;
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => setPageState(pageFromHash());
+    const onHashChange = () => {
+      setPageState(pageFromHash());
+      setClassroomId(classroomIdFromHash());
+      setClassroomTab(classroomTabFromHash());
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -86,6 +112,21 @@ function App() {
       {page === "Quiz" && <Quiz quizCount={quizCount} sourceCount={sources.length} setPage={setPage} />}
 
       {page === "Settings" && <Settings sourceCount={sources.length} />}
+
+      {page === "Classroom" && classroomId !== null && (
+        <ClassroomPage
+          key={classroomId}
+          classroomId={classroomId}
+          tab={classroomTab}
+          onTabChange={(next) => {
+            window.location.hash = `/classroom/${classroomId}/${next}`;
+          }}
+          sources={sources}
+          refreshSources={refreshSources}
+          setPage={setPage}
+          setQuestionCount={setQuestionCount}
+        />
+      )}
     </AppShell>
   );
 }

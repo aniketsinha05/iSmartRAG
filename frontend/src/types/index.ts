@@ -3,7 +3,8 @@ export type Page =
   | "Knowledge Base"
   | "Chat"
   | "Quiz"
-  | "Settings";
+  | "Settings"
+  | "Classroom";
 
 export type Source = {
   name: string;
@@ -24,4 +25,17 @@ export type SearchResult = {
   source: string | null;
   type: string | null;
   distance: number | null;
+};
+
+export type ChatSummary = {
+  id: string;
+  title: string;
+  updatedAt: string;
+  messageCount: number;
+};
+
+export type Classroom = {
+  id: number;
+  name: string;
+  documentCount: number;
 };

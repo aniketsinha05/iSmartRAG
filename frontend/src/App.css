@@ -3857,3 +3857,323 @@ body.dark-mode .kb-page .kb-panel-tab {
 body.dark-mode .kb-page .kb-panel-tab.active {
   color: #93c5fd;
 }
+
+/* ---------- Classrooms ---------- */
+.cr-section-head h3 {
+  font-size: 16px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.cr-section-head p {
+  margin: 4px 0 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.cr-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cr-card:hover {
+  border-color: #b9ccf5;
+  background: #f6f9ff;
+}
+
+.cr-card-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #eaf1ff;
+  font-size: 20px;
+}
+
+.cr-card strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.cr-card small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cr-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cr-bar strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.cr-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cr-page .kb-action {
+  height: 32px;
+  padding: 0 12px;
+}
+
+.cr-chat {
+  height: calc(100vh - var(--topbar-h) - 260px);
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.cr-chat .ct-page {
+  height: 100%;
+}
+
+.cr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 22, 51, 0.5);
+}
+
+.cr-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.cr-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cr-modal-head h3 {
+  font-size: 17px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.cr-modal .hm-meta {
+  margin-top: 0;
+}
+
+.cr-list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.cr-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f1f3;
+  cursor: pointer;
+}
+
+.cr-item:last-child {
+  border-bottom: 0;
+}
+
+.cr-item:hover {
+  background: #f6f9ff;
+}
+
+.cr-item.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cr-item-info {
+  min-width: 0;
+}
+
+.cr-item-info strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.cr-item-info small {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cr-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+body.dark-mode .cr-section-head h3,
+body.dark-mode .cr-card strong,
+body.dark-mode .cr-bar strong,
+body.dark-mode .cr-modal-head h3,
+body.dark-mode .cr-item-info strong {
+  color: #f5f5f5;
+}
+
+body.dark-mode .cr-section-head p,
+body.dark-mode .cr-card small,
+body.dark-mode .cr-item-info small {
+  color: #9a9a9a;
+}
+
+body.dark-mode .cr-card,
+body.dark-mode .cr-modal {
+  background: #1c1c1c;
+  border-color: #333333;
+}
+
+body.dark-mode .cr-card:hover,
+body.dark-mode .cr-item:hover {
+  background: #242424;
+}
+
+body.dark-mode .cr-card-icon {
+  background: #1c2a47;
+}
+
+body.dark-mode .cr-chat,
+body.dark-mode .cr-list {
+  border-color: #2a2a2a;
+}
+
+body.dark-mode .cr-item {
+  border-color: #2a2a2a;
+}
+
+@media (max-width: 700px) {
+  .cr-chat {
+    height: calc(100vh - var(--topbar-h) - 220px);
+  }
+}
+
+/* ---------- Saved classroom chats (side list) ---------- */
+.ct-hist {
+  display: flex;
+  align-items: center;
+  border-radius: 9px;
+}
+
+.ct-hist:hover {
+  background: #eef2fa;
+}
+
+.ct-hist.active {
+  background: #e9efff;
+}
+
+.ct-hist-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.ct-hist-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.ct-hist.active .ct-hist-main strong {
+  color: #1d3a8a;
+}
+
+.ct-hist-main small {
+  font-size: 11px;
+  color: #6b7a99;
+}
+
+.ct-hist-del {
+  width: 26px;
+  height: 26px;
+  margin-right: 6px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  color: #8a94a6;
+  font-size: 11px;
+  opacity: 0;
+}
+
+.ct-hist:hover .ct-hist-del,
+.ct-hist-del:focus-visible {
+  opacity: 1;
+}
+
+.ct-hist-del:hover {
+  background: #fdf0f0;
+  color: #b91c1c;
+}
+
+body.dark-mode .ct-hist:hover {
+  background: #202020;
+}
+
+body.dark-mode .ct-hist.active {
+  background: #1c2a47;
+}
+
+body.dark-mode .ct-hist-main strong {
+  color: #f5f5f5;
+}
+
+body.dark-mode .ct-hist.active .ct-hist-main strong {
+  color: #93c5fd;
+}
+
+body.dark-mode .ct-hist-main small {
+  color: #9a9a9a;
+}
