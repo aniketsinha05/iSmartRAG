@@ -239,7 +239,7 @@ export default function ClassroomPicker({
   }, [refreshSources]);
 
   const openChat = (id: number) => {
-    window.location.hash = `/classroom/${id}/chat`;
+    window.location.hash = `/chat/cr/${id}`;
   };
 
   return (

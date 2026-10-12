@@ -749,3 +749,181 @@ body.dark-mode .ct-side-title {
     max-width: 90%;
   }
 }
+/* ── Classroom picker in Chat composer ──────────────────────────────────── */
+
+.ct-composer-wrap {
+  position: relative; /* needed for the picker's absolute positioning */
+}
+
+/* Badges row */
+.ct-badges {
+  width: min(860px, 100%);
+  margin: 0 auto 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 20px;
+}
+
+.ct-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #c5d3f0;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ct-badge button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ct-badge button:hover {
+  color: #b91c1c;
+}
+
+/* Picker dropdown */
+.ct-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 20px;
+  right: 20px;
+  max-width: min(860px, 100%);
+  margin: 0 auto;
+  z-index: 60;
+  background: #ffffff;
+  border: 1px solid #d5dbe7;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.14);
+  overflow: hidden;
+}
+
+.ct-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.ct-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1f2937;
+  transition: background 0.1s ease;
+}
+
+.ct-picker-item:hover {
+  background: #f6f9ff;
+}
+
+.ct-picker-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.ct-picker-clear {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: transparent;
+  color: #6b7280;
+  font-size: 12px;
+  text-align: left;
+}
+
+.ct-picker-clear:hover {
+  background: #f9fafb;
+  color: #1f2937;
+}
+
+/* + button inside the composer */
+.ct-scope-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: #9aa3b2;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ct-scope-btn:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+.ct-scope-btn.active {
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+/* Dark mode */
+body.dark-mode .ct-badge {
+  background: #1c2a47;
+  border-color: #2b3a5c;
+  color: #93c5fd;
+}
+
+body.dark-mode .ct-picker {
+  background: #1c1c1c;
+  border-color: #333333;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .ct-picker-head {
+  color: #9a9a9a;
+}
+
+body.dark-mode .ct-picker-item {
+  color: #f5f5f5;
+}
+
+body.dark-mode .ct-picker-item:hover {
+  background: #242424;
+}
+
+body.dark-mode .ct-picker-clear {
+  border-color: #2a2a2a;
+  color: #9a9a9a;
+}
+
+body.dark-mode .ct-picker-clear:hover {
+  background: #242424;
+  color: #f5f5f5;
+}
+
+body.dark-mode .ct-scope-btn:hover {
+  background: #242424;
+  color: #d4d4d4;
+}
+
+body.dark-mode .ct-scope-btn.active {
+  background: #1c2a47;
+  color: #93c5fd;
+}
