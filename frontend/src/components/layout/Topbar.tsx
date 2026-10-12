@@ -67,11 +67,18 @@ export default function Topbar({
           &#128276;
         </button>
 
-        <div className="topbar-user">
+        <button
+          type="button"
+          className="topbar-user"
+          onClick={() => {
+            window.location.hash = "/settings";
+          }}
+          aria-label="Open settings"
+          title="Settings"
+        >
           <span className="topbar-avatar">U</span>
           <span className="topbar-name">User</span>
-          <span className="topbar-caret">&#8964;</span>
-        </div>
+        </button>
       </div>
     </header>
   );
