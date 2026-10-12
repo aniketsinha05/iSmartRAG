@@ -1,7 +1,7 @@
 import { apiClient } from "./apiClient";
 import type { Source } from "../types";
 
-type ApiSource = {
+export type ApiSource = {
   name: string;
   type: string;
   chunks: number;
@@ -31,18 +31,22 @@ export function formatSize(bytes: number | null | undefined): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export async function fetchSources(): Promise<Source[]> {
-  const response = await apiClient("/sources");
-  const data = await response.json();
-
-  return (data.sources as ApiSource[]).map((item) => ({
+export function toSource(item: ApiSource): Source {
+  return {
     name: item.name,
     type: toSourceType(item.type, item.name),
     size: formatSize(item.size_bytes),
     chunks: item.chunks,
     addedAt: item.added_at,
     sizeBytes: item.size_bytes,
-  }));
+  };
+}
+
+export async function fetchSources(): Promise<Source[]> {
+  const response = await apiClient("/sources");
+  const data = await response.json();
+
+  return (data.sources as ApiSource[]).map(toSource);
 }
 
 export async function fetchSourceContent(name: string): Promise<string[]> {

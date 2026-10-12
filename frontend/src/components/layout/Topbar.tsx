@@ -6,6 +6,7 @@ const TITLES: Record<Page, string> = {
   Dashboard: "Home",
   "Knowledge Base": "Knowledge Base",
   Chat: "Search / Ask",
+  Classroom: "Classroom",
   Quiz: "Quiz",
   Settings: "Settings",
 };
