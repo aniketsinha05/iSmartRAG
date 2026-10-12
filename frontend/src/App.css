@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&display=swap');
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -2624,9 +2626,11 @@ body.dark-mode .sx-pill.bad {
 
 .sidebar-brand strong {
   color: #ffffff;
+  font-family: "Orbitron", sans-serif;
   font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px rgba(151, 128, 255, 0.35);
 }
 
 .sidebar-brand span {
