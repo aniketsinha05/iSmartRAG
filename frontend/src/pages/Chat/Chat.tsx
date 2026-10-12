@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { Classroom, ChatSummary, Message } from "../../types";
+import type { Classroom, ChatSummary, Message, Source } from "../../types";
+import { fetchSources } from "../../services/sourcesService";
 import { askQuestion } from "../../services/askService";
 import {
   askMultipleClassrooms,
@@ -73,6 +74,11 @@ export default function Chat({
   const [availableClassrooms, setAvailableClassrooms] = useState<Classroom[]>([]);
   const [showPicker, setShowPicker]                   = useState(false);
 
+  // ── Knowledge Base document picker ──
+const [availableSources, setAvailableSources] = useState<Source[]>([]);
+const [selectedSources, setSelectedSources] = useState<string[]>([]);
+const [sourceSearch, setSourceSearch] = useState("");
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -86,6 +92,10 @@ export default function Chat({
   useEffect(() => {
     fetchClassrooms().then(setAvailableClassrooms).catch(console.error);
   }, []);
+
+  useEffect(() => {
+  fetchSources().then(setAvailableSources).catch(console.error);
+}, []);
 
   // ── load persisted chats on mount ────────────────────────────────────────
   useEffect(() => {
@@ -197,10 +207,21 @@ export default function Chat({
         writeActiveChat(activeChatId);
       }
 
-      const data =
-        classroomIds.length > 0
-          ? await askMultipleClassrooms(classroomIds, question, 5, activeChatId)
-          : await askQuestion(question, 5, activeChatId);
+      const response = await fetch("http://localhost:8000/chat/ask", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    question,
+    classroom_ids: classroomIds,
+    sources: selectedSources,
+    n_results: 5,
+    chat_id: activeChatId,
+  }),
+});
+
+if (!response.ok) throw new Error("Failed to get an answer.");
+
+const data = await response.json();
 
       setMessages((curr) => [
         ...curr,
@@ -267,6 +288,22 @@ export default function Chat({
     setClassroomIds((curr) =>
       curr.includes(id) ? curr.filter((c) => c !== id) : [...curr, id]
     );
+
+
+
+
+const toggleSource = (name: string) =>
+  setSelectedSources((curr) =>
+    curr.includes(name)
+      ? curr.filter((source) => source !== name)
+      : [...curr, name]
+  );
+
+const filteredSources = availableSources.filter((source) =>
+  source.name.toLowerCase().includes(sourceSearch.toLowerCase())
+);
+
+    
 
   const copy = async (text: string, index: number) => {
     try {
@@ -449,6 +486,36 @@ export default function Chat({
                 </label>
               ))}
 
+{/* Knowledge Base documents */}
+<div className="ct-picker-head">
+  <span>Knowledge Base Documents</span>
+  <button
+    type="button"
+    className="ct-picker-clear"
+    onClick={() => setSelectedSources([])}
+  >
+    Clear
+  </button>
+</div>
+
+<input
+  className="sx-select"
+  placeholder="Search documents..."
+  value={sourceSearch}
+  onChange={(e) => setSourceSearch(e.target.value)}
+/>
+
+{filteredSources.map((source) => (
+  <label key={source.name} className="ct-picker-item">
+    <input
+      type="checkbox"
+      checked={selectedSources.includes(source.name)}
+      onChange={() => toggleSource(source.name)}
+    />
+    <span>📄</span>
+    <span style={{ flex: 1 }}>{source.name}</span>
+  </label>
+))}
               {classroomIds.length > 0 && (
                 <button
                   type="button"

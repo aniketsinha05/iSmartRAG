@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
+from pydantic import BaseModel, Field
 from backend import chats, classrooms
 from backend.vector_store import (
     add_pieces,
@@ -248,6 +248,22 @@ class ImportRequest(BaseModel):
     names: list[str]
 
 
+
+
+
+
+class ChatSourceRequest(BaseModel):
+    question: str
+    classroom_ids: list[int] = []
+    sources: list[str] = []
+    chat_id: str | None = None
+    n_results: int = 5
+
+
+
+
+
+
 def _classroom(classroom_id: int):
     if not classrooms.is_valid(classroom_id):
         raise HTTPException(status_code=404, detail="Classroom not found.")
@@ -257,6 +273,99 @@ def _classroom(classroom_id: int):
 @app.get("/classrooms")
 def get_classrooms():
     return {"classrooms": classrooms.list_classrooms()}
+
+
+
+
+
+
+
+@app.post("/chat/ask")
+def chat_with_selected_sources(body: ChatSourceRequest):
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is required.")
+
+    if body.chat_id and chats.get_chat(GENERAL_CHAT_BUCKET, body.chat_id) is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+
+    if any(not classrooms.is_valid(i) for i in body.classroom_ids):
+        raise HTTPException(status_code=400, detail="Invalid classroom ID.")
+
+    selected = set(body.sources)
+    for cid in body.classroom_ids:
+        selected.update(classrooms.get_sources(cid))
+
+    if body.sources:
+        known = {s["name"] for s in list_sources()}
+        if not set(body.sources).issubset(known):
+            raise HTTPException(status_code=400, detail="Unknown Knowledge Base document.")
+
+    results = search(
+        question,
+        n_results=max(1, min(body.n_results, 10)),
+        sources=sorted(selected) if selected else (
+            [] if body.classroom_ids or body.sources else None
+        ),
+    )
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+
+    answer = (
+        generate_answer(question, documents)
+        if documents else "No matching documents found in the selected sources."
+    )
+    sources = sorted({m["source"] for m in metadatas if m.get("source")})
+
+    if body.chat_id:
+        chats.add_messages(
+            GENERAL_CHAT_BUCKET, body.chat_id,
+            [{"role": "user", "text": question}, {"role": "ai", "text": answer}],
+        )
+
+    return {
+        "question": question,
+        "answer": answer,
+        "sources": sources,
+        "chat_id": body.chat_id,
+    }
+
+
+
+
+
+class ClassroomRequest(BaseModel):
+    name: str
+
+
+@app.post("/classrooms")
+def create_classroom(body: ClassroomRequest):
+    classroom_id, error = classrooms.create_classroom(body.name)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return classrooms.get_classroom(classroom_id)
+
+
+@app.patch("/classrooms/{classroom_id}")
+def rename_classroom(classroom_id: int, body: ClassroomRequest):
+    success, error = classrooms.rename_classroom(classroom_id, body.name)
+    if not success:
+        status = 404 if error == "Classroom not found." else 400
+        raise HTTPException(status_code=status, detail=error)
+    return classrooms.get_classroom(classroom_id)
+
+
+@app.delete("/classrooms/{classroom_id}")
+def delete_classroom(classroom_id: int):
+    _classroom(classroom_id)
+    classrooms.delete_classroom(classroom_id)
+    chats.delete_classroom_chats(classroom_id)
+    return {"success": True}
+
+
+
+
+
 
 
 @app.get("/classrooms/{classroom_id}/documents")

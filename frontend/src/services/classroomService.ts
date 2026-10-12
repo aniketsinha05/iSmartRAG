@@ -41,6 +41,44 @@ export async function fetchClassrooms(): Promise<Classroom[]> {
   return (data.classrooms as ApiClassroom[]).map(toClassroom);
 }
 
+
+
+
+
+
+
+export async function createClassroom(name: string): Promise<Classroom> {
+  const response = await apiClient("/classrooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return toClassroom(await response.json());
+}
+
+export async function renameClassroom(
+  id: number,
+  name: string
+): Promise<Classroom> {
+  const response = await apiClient(`/classrooms/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return toClassroom(await response.json());
+}
+
+export async function deleteClassroom(id: number): Promise<void> {
+  await apiClient(`/classrooms/${id}`, { method: "DELETE" });
+}
+
+
+
+
+
+
+
+
 export async function fetchClassroomDocuments(
   classroomId: number
 ): Promise<{ classroom: Classroom; documents: Source[] }> {

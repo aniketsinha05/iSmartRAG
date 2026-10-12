@@ -6,7 +6,12 @@ import {
   importDocuments,
   removeClassroomDocument,
   uploadToClassroom,
+  createClassroom,
+  renameClassroom,
+  deleteClassroom,
 } from "../../services/classroomService";
+
+const MAX_CLASSROOMS = 20;
 
 const TYPE_ICON: Record<Source["type"], string> = {
   PDF: "📕", DOCX: "📘", PPT: "📙", EXCEL: "📗", WEB: "🌐",
@@ -23,9 +28,13 @@ type ClassroomCardProps = {
   room: Classroom;
   allSources: Source[];
   onChatOpen: (id: number) => void;
+  onRename: (room: Classroom) => void;
+  onDelete: (room: Classroom) => void;
 };
 
-function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
+function ClassroomCard({
+  room, allSources, onChatOpen, onRename, onDelete,
+}: ClassroomCardProps) {
   const [docs, setDocs] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -46,8 +55,9 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
 
   useEffect(() => { load(); }, [load]);
 
-  const inClassroom = new Set(docs.map((d) => d.name));
-  const available = allSources.filter((s) => !inClassroom.has(s.name));
+  const available = allSources.filter(
+    (s) => !docs.some((d) => d.name === s.name),
+  );
 
   const addFromKB = async () => {
     if (!selected || busy) return;
@@ -95,7 +105,6 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
 
   return (
     <div className="sx-card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div className="cr-card-icon">🏫</div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -104,6 +113,8 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
             {docs.length} document{docs.length === 1 ? "" : "s"}
           </small>
         </div>
+        <button className="hm-small" onClick={() => onRename(room)}>Rename</button>
+        <button className="hm-small" onClick={() => onDelete(room)}>Delete</button>
         <button
           type="button"
           className="hm-primary hm-small"
@@ -113,10 +124,9 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
         </button>
       </div>
 
-      {/* Drag & drop zone */}
       <div
         className={`hm-drop ${dragging ? "drag" : ""}`}
-        style={{ padding: "14px", minHeight: 70 }}
+        style={{ padding: 14, minHeight: 70 }}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
@@ -130,48 +140,30 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
         <span style={{ fontSize: 13 }}>Drop a file here to add it to {room.name}</span>
       </div>
 
-      {/* KB dropdown */}
       <div style={{ display: "flex", gap: 8 }}>
         <select
           className="sx-select"
           style={{ flex: 1 }}
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          disabled={busy || available.length === 0}
+          disabled={busy || !available.length}
         >
           <option value="">
-            {available.length === 0
-              ? "No new sources in Knowledge Base"
-              : "Select from Knowledge Base..."}
+            {available.length ? "Select from Knowledge Base..." : "No new sources in Knowledge Base"}
           </option>
-          {available.map((s) => (
-            <option key={s.name} value={s.name}>
-              {s.name}
-            </option>
-          ))}
+          {available.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
         </select>
-        <button
-          type="button"
-          className="hm-primary"
-          disabled={!selected || busy}
-          onClick={addFromKB}
-          style={{ whiteSpace: "nowrap" }}
-        >
+        <button className="hm-primary" disabled={!selected || busy} onClick={addFromKB}>
           + Add
         </button>
       </div>
 
-      {message && (
-        <p className="cp-msg">{message}</p>
-      )}
+      {message && <p className="cp-msg">{message}</p>}
 
-      {/* Document list */}
       {loading ? (
-        <div className="hm-empty" style={{ padding: "10px 0" }}>Loading...</div>
+        <div className="hm-empty">Loading...</div>
       ) : docs.length === 0 ? (
-        <div className="hm-empty" style={{ padding: "10px 0" }}>
-          No documents yet. Add from the Knowledge Base or drop a file above.
-        </div>
+        <div className="hm-empty">No documents yet. Add from the Knowledge Base or drop a file above.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {docs.map((doc) => (
@@ -182,12 +174,10 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
               <button
                 type="button"
                 className="hm-x"
-                aria-label="Remove"
+                aria-label={`Remove ${doc.name} from classroom`}
                 disabled={busy}
                 onClick={() => removeDoc(doc.name)}
-              >
-                ✕
-              </button>
+              >✕</button>
             </div>
           ))}
         </div>
@@ -197,8 +187,7 @@ function ClassroomCard({ room, allSources, onChatOpen }: ClassroomCardProps) {
 }
 
 export default function ClassroomPicker({
-  sources,
-  refreshSources,
+  sources, refreshSources,
 }: {
   sources: Source[];
   refreshSources: () => Promise<void>;
@@ -206,14 +195,69 @@ export default function ClassroomPicker({
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setClassrooms(await fetchClassrooms());
+      setError("");
+    } catch {
+      setError("Could not load classrooms. Is the backend running?");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    refreshSources();
-    fetchClassrooms()
-      .then(setClassrooms)
-      .catch(() => setError("Could not load classrooms. Is the backend running?"))
-      .finally(() => setLoading(false));
-  }, [refreshSources]);
+    void refreshSources();
+    void load();
+  }, [load, refreshSources]);
+
+  const create = async () => {
+    const value = name.trim();
+    if (!value || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await createClassroom(value);
+      setName("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not create classroom.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rename = async (room: Classroom) => {
+    const value = window.prompt("Enter the new classroom name:", room.name);
+    if (value === null || !value.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await renameClassroom(room.id, value.trim());
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not rename classroom.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (room: Classroom) => {
+    if (!window.confirm(`Delete "${room.name}"? Its saved chats will be removed, but Knowledge Base documents will remain.`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await deleteClassroom(room.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete classroom.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const openChat = (id: number) => {
     try {
@@ -235,6 +279,27 @@ export default function ClassroomPicker({
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <input
+          className="sx-select"
+          style={{ flex: 1 }}
+          placeholder="New classroom name (1–40 characters)"
+          value={name}
+          maxLength={40}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") void create(); }}
+          disabled={busy || classrooms.length >= MAX_CLASSROOMS}
+        />
+        <button
+          className="hm-primary"
+          onClick={create}
+          disabled={busy || !name.trim() || classrooms.length >= MAX_CLASSROOMS}
+        >
+          + Create Classroom
+        </button>
+      </div>
+
+      <p className="cp-count">{classrooms.length} / {MAX_CLASSROOMS} classrooms</p>
       {loading && <div className="hm-empty">Loading classrooms...</div>}
       {error && <p className="hm-error">{error}</p>}
 
@@ -250,6 +315,8 @@ export default function ClassroomPicker({
               room={room}
               allSources={sources}
               onChatOpen={openChat}
+              onRename={rename}
+              onDelete={remove}
             />
           ))}
         </div>

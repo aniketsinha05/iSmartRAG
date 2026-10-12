@@ -103,3 +103,17 @@ def delete_chat(classroom_id, chat_id):
         data[str(classroom_id)].remove(chat)
         _save(data)
     return True
+
+
+
+
+
+
+def delete_classroom_chats(classroom_id):
+    with _lock:
+        data = _load()
+        if str(classroom_id) not in data:
+            return False
+        del data[str(classroom_id)]
+        _save(data)
+    return True
