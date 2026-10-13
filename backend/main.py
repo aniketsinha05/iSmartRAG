@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-
+from backend.quiz import QuizRequest, QuizAttemptRequest, sample_chunks, build_prompt, validate, generate_questions
 from pydantic import BaseModel, Field
-from backend import chats, classrooms
+from backend import chats, classrooms, quiz_store
 from backend.vector_store import (
     add_pieces,
     delete_source,
@@ -13,7 +13,7 @@ from backend.vector_store import (
     list_sources,
     search,
 )
-from backend.llm.generate_answer import generate_answer
+from backend.llm.generate_answer import generate_answer, call_groq_json
 from backend.excel.parse_excel import parse_excel_pieces
 from backend.ppt.parse_ppt import parse_ppt_pieces
 from backend.word.parse_word import parse_word_pieces
@@ -560,6 +560,101 @@ def classroom_ask(
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ask failed: {exc}")
+
+
+
+
+
+
+
+
+
+
+
+
+@app.post("/classrooms/{classroom_id}/quiz")
+def create_quiz(classroom_id: int, body: QuizRequest):
+    _classroom(classroom_id)
+
+    names = classrooms.get_sources(classroom_id)
+    if body.document_names:
+        names = [n for n in names if n in body.document_names]
+    if not names:
+        raise HTTPException(status_code=400, detail="Upload documents first.")
+
+    chunks_by_doc = {
+        n: [{"text": t} for t in get_source_chunks(n, limit=200)]
+        for n in names
+    }
+    chunks = sample_chunks(chunks_by_doc, body.num_questions + 2)
+    if not chunks:
+        raise HTTPException(
+            status_code=400, detail="These documents have no readable text."
+        )
+
+    try:
+        questions = generate_questions(call_groq_json, chunks, body)
+    except Exception as exc:
+        print("Quiz generation failed:", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="The AI service failed or is rate-limited. Try again in a minute.",
+        )
+
+    if not questions:
+        raise HTTPException(
+            status_code=502, detail="Could not generate the quiz. Please try again."
+        )
+    return {"questions": questions}
+
+
+
+
+
+
+
+@app.post("/quiz/attempts")
+def save_quiz_attempt(body: QuizAttemptRequest):
+    classroom = _classroom(body.classroom_id)
+    if not body.questions or len(body.answers) != len(body.questions):
+        raise HTTPException(
+            status_code=400, detail="Answers must match the questions."
+        )
+    settings = {
+        "document_names": body.document_names,
+        "difficulty": body.difficulty,
+        "include_true_false": body.include_true_false,
+    }
+    name = classroom.get("name", f"Classroom {body.classroom_id}")
+    return quiz_store.save_attempt(
+        body.classroom_id, name, settings, body.questions, body.answers
+    )
+
+
+@app.get("/quiz/attempts")
+def list_quiz_attempts(limit: int = 50):
+    return {"attempts": quiz_store.list_attempts(min(max(limit, 1), 200))}
+
+
+@app.get("/quiz/attempts/{attempt_id}")
+def get_quiz_attempt(attempt_id: str):
+    attempt = quiz_store.get_attempt(attempt_id)
+    if attempt is None:
+        raise HTTPException(status_code=404, detail="Attempt not found.")
+    return attempt
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 
 @app.get("/classrooms/{classroom_id}/chats")
