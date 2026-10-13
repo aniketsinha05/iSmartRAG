@@ -29,3 +29,7 @@ backend/classrooms.json
 backend/chats.json
 
 venv312/   
+
+
+
+backend/quiz_attempts.json

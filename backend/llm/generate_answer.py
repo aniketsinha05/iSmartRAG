@@ -35,3 +35,19 @@ def generate_answer(question, chunks, scope="your documents"):
         ],
     )
     return response.choices[0].message.content
+
+
+
+def call_groq_json(prompt: str) -> str:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY is missing in the .env file")
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=MODEL,
+        temperature=0.4,
+        response_format={"type": "json_object"},
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.choices[0].message.content
