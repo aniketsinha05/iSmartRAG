@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Classroom, ChatSummary, Message, Source } from "../../types";
 import { fetchSources } from "../../services/sourcesService";
-import { askQuestion } from "../../services/askService";
+
 import {
-  askMultipleClassrooms,
   fetchClassrooms,
   fetchGeneralChats,
   createGeneralChat,

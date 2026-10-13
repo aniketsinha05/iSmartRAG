@@ -85,7 +85,7 @@ function App() {
   const [collapsed, setCollapsed] = useState(() => window.innerWidth <= 900);
   const [sources, setSources] = useState<Source[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
-  const [quizCount] = useState(0);
+  
 
   const refreshSources = useCallback(async () => {
     try {
@@ -128,13 +128,15 @@ function App() {
         <Chat setQuestionCount={setQuestionCount} />
       )}
 
-      {page === "Quiz" && (
-        <Quiz
-          quizCount={quizCount}
-          sourceCount={sources.length}
-          setPage={setPage}
-        />
-      )}
+      
+
+
+
+          {page === "Quiz" && <Quiz sourceCount={sources.length} />}
+
+
+
+
 
       {page === "Settings" && <Settings sourceCount={sources.length} />}
 

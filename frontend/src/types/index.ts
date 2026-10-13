@@ -39,3 +39,43 @@ export type Classroom = {
   name: string;
   documentCount: number;
 };
+
+export type QuizDifficulty = "easy" | "medium" | "hard";
+
+export type QuizQuestion = {
+  id: string;
+  type: "mcq" | "tf";
+  question: string;
+  options: string[];
+  answerIndex: number;
+  explanation: string;
+  source: { file: string; page: number | null; section: string | null };
+};
+
+export type QuizSettings = {
+  classroomId: number;
+  documentNames: string[];
+  numQuestions: 5 | 10;
+  difficulty: QuizDifficulty;
+  includeTrueFalse: boolean;
+};
+
+export type QuizAttemptSummary = {
+  id: string;
+  classroomId: number;
+  classroomName: string;
+  createdAt: string;
+  numQuestions: number;
+  correct: number;
+  score: number; // percent
+};
+
+export type QuizAttempt = QuizAttemptSummary & {
+  settings: {
+    documentNames: string[];
+    difficulty: QuizDifficulty;
+    includeTrueFalse: boolean;
+  };
+  questions: QuizQuestion[];
+  answers: (number | null)[]; // null = skipped
+};
