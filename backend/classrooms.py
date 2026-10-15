@@ -1,171 +1,217 @@
-import json
-import os
-import threading
+from pathlib import Path
 
-BASE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(BASE, "classrooms.json")
-MAX_CLASSROOMS = 20
-_lock = threading.Lock()
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
+from backend.models import Classroom, ClassroomDocument, KnowledgeBase
 
-def _default():
-    return {
-        **{str(i): {"name": f"Classroom {i}", "sources": []} for i in range(1, 6)},
-        "_next_id": 6,
-    }
-
-
-def _load():
-    if not os.path.exists(PATH):
-        return _default()
-
-    with open(PATH, encoding="utf-8") as f:
-        data = json.load(f)
-
-    ids = [int(k) for k in data if k.isdigit()]
-    data.setdefault("_next_id", max(ids, default=0) + 1)
-    return data
-
-
-def _save(data):
-    with open(PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+MAX_CLASSROOMS = 20  # per user
 
 
 def _valid_name(name):
     return isinstance(name, str) and 1 <= len(name.strip()) <= 40
 
 
-def _unique_name(data, name, exclude=None):
-    return not any(
-        k.isdigit() and int(k) != exclude
-        and item["name"].strip().casefold() == name.strip().casefold()
-        for k, item in data.items()
+def _get(db: Session, user_id: int, classroom_id):
+    """Return the classroom only if it belongs to this user."""
+    if not isinstance(classroom_id, int):
+        return None
+    return db.scalar(
+        select(Classroom).where(
+            Classroom.id == classroom_id, Classroom.user_id == user_id
+        )
     )
 
 
-def is_valid(classroom_id):
-    if not isinstance(classroom_id, int):
-        return False
-    with _lock:
-        return str(classroom_id) in _load()
+def _name_taken(db: Session, user_id: int, name: str, exclude_id=None) -> bool:
+    q = select(Classroom.id).where(
+        Classroom.user_id == user_id,
+        func.lower(Classroom.name) == name.strip().lower(),
+    )
+    if exclude_id is not None:
+        q = q.where(Classroom.id != exclude_id)
+    return db.scalar(q) is not None
 
 
-def get_classroom(classroom_id):
-    with _lock:
-        item = _load().get(str(classroom_id))
-        return (
-            {"id": classroom_id, "name": item["name"],
-             "document_count": len(item["sources"])}
-            if item else None
-        )
+def _doc_count(db: Session, classroom_id: int) -> int:
+    return db.scalar(
+        select(func.count())
+        .select_from(ClassroomDocument)
+        .where(ClassroomDocument.classroom_id == classroom_id)
+    )
 
 
-def list_classrooms():
-    with _lock:
-        data = _load()
-    return [
-        {"id": int(k), "name": v["name"], "document_count": len(v["sources"])}
-        for k, v in data.items() if k.isdigit()
-    ]
+def is_valid(db, user_id, classroom_id):
+    return _get(db, user_id, classroom_id) is not None
 
 
-def create_classroom(name):
+def get_classroom(db, user_id, classroom_id):
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return None
+    return {
+        "id": room.id,
+        "name": room.name,
+        "document_count": _doc_count(db, room.id),
+    }
+
+
+def list_classrooms(db, user_id):
+    rows = db.execute(
+        select(Classroom.id, Classroom.name, func.count(ClassroomDocument.document_id))
+        .outerjoin(ClassroomDocument, ClassroomDocument.classroom_id == Classroom.id)
+        .where(Classroom.user_id == user_id)
+        .group_by(Classroom.id, Classroom.name)
+        .order_by(Classroom.id)
+    ).all()
+    return [{"id": r[0], "name": r[1], "document_count": r[2]} for r in rows]
+
+
+def create_classroom(db, user_id, name):
     if not _valid_name(name):
-        return None, "Name must be 1–40 characters."
-
+        return None, "Name must be 1-40 characters."
     name = name.strip()
-    with _lock:
-        data = _load()
-        if sum(k.isdigit() for k in data) >= MAX_CLASSROOMS:
-            return None, "Maximum of 20 classrooms reached."
-        if not _unique_name(data, name):
-            return None, "A classroom with this name already exists."
 
-        classroom_id = data["_next_id"]
-        data[str(classroom_id)] = {"name": name, "sources": []}
-        data["_next_id"] = classroom_id + 1
-        _save(data)
+    count = db.scalar(
+        select(func.count()).select_from(Classroom).where(Classroom.user_id == user_id)
+    )
+    if count >= MAX_CLASSROOMS:
+        return None, f"Maximum of {MAX_CLASSROOMS} classrooms reached."
+    if _name_taken(db, user_id, name):
+        return None, "A classroom with this name already exists."
 
-    return classroom_id, None
+    room = Classroom(user_id=user_id, name=name)
+    db.add(room)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return None, "A classroom with this name already exists."
+    db.refresh(room)
+    return room.id, None
 
 
-def rename_classroom(classroom_id, name):
+def rename_classroom(db, user_id, classroom_id, name):
     if not _valid_name(name):
-        return False, "Name must be 1–40 characters."
-
+        return False, "Name must be 1-40 characters."
     name = name.strip()
-    with _lock:
-        data = _load()
-        key = str(classroom_id)
-        if key not in data:
-            return False, "Classroom not found."
-        if not _unique_name(data, name, classroom_id):
-            return False, "A classroom with this name already exists."
 
-        data[key]["name"] = name
-        _save(data)
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return False, "Classroom not found."
+    if _name_taken(db, user_id, name, exclude_id=room.id):
+        return False, "A classroom with this name already exists."
 
+    room.name = name
+    room.updated_at = func.now()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return False, "A classroom with this name already exists."
     return True, None
 
 
-def delete_classroom(classroom_id):
-    with _lock:
-        data = _load()
-        if str(classroom_id) not in data:
-            return False
-
-        del data[str(classroom_id)]
-        _save(data)
+def delete_classroom(db, user_id, classroom_id):
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return False
+    # classroom_documents rows cascade; chats/quiz_attempts.classroom_id -> NULL
+    db.delete(room)
+    db.commit()
     return True
 
 
-def get_sources(classroom_id):
-    with _lock:
-        item = _load().get(str(classroom_id))
-        return list(item["sources"]) if item else []
+def get_sources(db, user_id, classroom_id):
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return []
+    rows = db.scalars(
+        select(KnowledgeBase.name)
+        .join(ClassroomDocument, ClassroomDocument.document_id == KnowledgeBase.id)
+        .where(
+            ClassroomDocument.classroom_id == room.id,
+            KnowledgeBase.user_id == user_id,
+        )
+        .order_by(ClassroomDocument.added_at, KnowledgeBase.id)
+    ).all()
+    return list(rows)
 
 
-def add_sources(classroom_id, names):
+def _get_or_create_doc(db: Session, user_id: int, name: str) -> KnowledgeBase:
+    doc = db.scalar(
+        select(KnowledgeBase).where(
+            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
+        )
+    )
+    if doc is None:
+        # Placeholder until document records move to the DB (later step).
+        doc = KnowledgeBase(
+            user_id=user_id,
+            name=name,
+            type=Path(name).suffix.lower().lstrip(".") or "unknown",
+        )
+        db.add(doc)
+        db.flush()
+    return doc
+
+
+def add_sources(db, user_id, classroom_id, names):
     added, skipped = [], []
-    with _lock:
-        data = _load()
-        item = data.get(str(classroom_id))
-        if not item:
-            return added, list(names)
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return added, list(names)
 
-        for name in names:
-            if name in item["sources"]:
-                skipped.append(name)
-            else:
-                item["sources"].append(name)
-                added.append(name)
+    for name in names:
+        doc = _get_or_create_doc(db, user_id, name)
+        exists = db.scalar(
+            select(ClassroomDocument).where(
+                ClassroomDocument.classroom_id == room.id,
+                ClassroomDocument.document_id == doc.id,
+            )
+        )
+        if exists:
+            skipped.append(name)
+        else:
+            db.add(ClassroomDocument(classroom_id=room.id, document_id=doc.id))
+            added.append(name)
 
-        if added:
-            _save(data)
-
+    db.commit()
     return added, skipped
 
 
-def remove_source(classroom_id, name):
-    with _lock:
-        data = _load()
-        item = data.get(str(classroom_id))
-        if not item or name not in item["sources"]:
-            return False
-        item["sources"].remove(name)
-        _save(data)
-    return True
+def remove_source(db, user_id, classroom_id, name):
+    room = _get(db, user_id, classroom_id)
+    if not room:
+        return False
+    doc = db.scalar(
+        select(KnowledgeBase).where(
+            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
+        )
+    )
+    if not doc:
+        return False
+    result = db.execute(
+        delete(ClassroomDocument).where(
+            ClassroomDocument.classroom_id == room.id,
+            ClassroomDocument.document_id == doc.id,
+        )
+    )
+    db.commit()
+    return result.rowcount > 0
 
 
-def remove_source_everywhere(name):
-    count = 0
-    with _lock:
-        data = _load()
-        for key, item in data.items():
-            if key.isdigit() and name in item["sources"]:
-                item["sources"].remove(name)
-                count += 1
-        if count:
-            _save(data)
-    return count
+def remove_source_everywhere(db, user_id, name):
+    doc = db.scalar(
+        select(KnowledgeBase).where(
+            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
+        )
+    )
+    if not doc:
+        return 0
+    result = db.execute(
+        delete(ClassroomDocument).where(ClassroomDocument.document_id == doc.id)
+    )
+    db.commit()
+    return result.rowcount
