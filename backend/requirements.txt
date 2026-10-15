@@ -17,4 +17,6 @@ transformers
 torch
 langchain-text-splitters
 rank_bm25
- 
+SQLAlchemy
+alembic
+psycopg[binary]
