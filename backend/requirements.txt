@@ -10,3 +10,7 @@ xlrd
 pypdf
 playwright
 beautifulsoup4
+SQLAlchemy
+alembic
+psycopg[binary]
+python-dotenv
