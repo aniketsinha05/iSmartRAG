@@ -1,0 +1,6 @@
+sqlalchemy
+psycopg2-binary
+bcrypt
+PyJWT
+email-validator
+alembic

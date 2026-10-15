@@ -1,6 +1,8 @@
 import shutil
 from pathlib import Path
 
+from backend.auth import router as auth_router
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from backend.quiz import QuizRequest, QuizAttemptRequest, sample_chunks, build_prompt, validate, generate_questions
@@ -32,6 +34,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
 
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
