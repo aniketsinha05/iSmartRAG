@@ -29,7 +29,7 @@ function classroomIdFromHash(): number | null {
   // only match /classroom/:id (not /classroom/:id/chat — that's the Chat page now)
   const match = window.location.hash.match(/^#\/classroom\/(\d+)(?!\/chat)/);
   const id = match ? Number(match[1]) : null;
-  return id !== null && id >= 1 && id <= 5 ? id : null;
+  return id !== null && id >= 1 ? id : null;
 }
 
 
