@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { QuizQuestion } from "../../types";
+import Icon from "../../components/common/Icon";
 import { LETTERS, sourceLabel } from "./quizUtils";
 
 type Props = {
   questions: QuizQuestion[];
   onFinish: (answers: (number | null)[]) => void;
+  onExit: () => void;
 };
 
 function optionClass(i: number, picked: number | null, answerIndex: number) {
@@ -14,7 +16,7 @@ function optionClass(i: number, picked: number | null, answerIndex: number) {
   return "qz-option qz-dim";
 }
 
-export default function QuizPlayer({ questions, onFinish }: Props) {
+export default function QuizPlayer({ questions, onFinish, onExit }: Props) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(() =>
     questions.map(() => null)
@@ -36,13 +38,34 @@ export default function QuizPlayer({ questions, onFinish }: Props) {
     else setIndex(index + 1);
   };
 
+  // Keyboard: A-D to answer, Enter / right arrow for next
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+
+      const choice = ["a", "b", "c", "d"].indexOf(e.key.toLowerCase());
+      if (choice >= 0 && choice < q.options.length) {
+        pick(choice);
+        return;
+      }
+      if (e.key === "Enter" && target.tagName === "BUTTON") return;
+      if ((e.key === "Enter" || e.key === "ArrowRight") && answered) next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   return (
-    <section className="sx-card">
-      <div className="qz-field-head">
-        <h3>
+    <section className="qz-card">
+      <div className="qz-play-top">
+        <button type="button" className="qz-ghost" onClick={onExit}>
+          <Icon name="arrowLeft" size={16} />
+          Exit quiz
+        </button>
+        <span className="qz-counter">
           Question {index + 1} of {questions.length}
-        </h3>
-        <span className="sx-hint">{q.type === "tf" ? "True / False" : "Multiple choice"}</span>
+        </span>
       </div>
 
       <div className="qz-bar">
@@ -52,20 +75,29 @@ export default function QuizPlayer({ questions, onFinish }: Props) {
         />
       </div>
 
-      <strong>{q.question}</strong>
+      <span className="qz-tag">
+        {q.type === "tf" ? "True / False" : "Multiple choice"}
+      </span>
+      <h2 className="qz-question">{q.question}</h2>
 
-      {q.options.map((option, i) => (
-        <button
-          key={i}
-          type="button"
-          disabled={answered}
-          className={optionClass(i, picked, q.answerIndex)}
-          onClick={() => pick(i)}
-        >
-          <span className="qz-letter">{LETTERS[i]}.</span>
-          <span>{option}</span>
-        </button>
-      ))}
+      <div className="qz-options">
+        {q.options.map((option, i) => (
+          <button
+            key={i}
+            type="button"
+            disabled={answered}
+            className={optionClass(i, picked, q.answerIndex)}
+            onClick={() => pick(i)}
+          >
+            <span className="qz-letter">{LETTERS[i]}</span>
+            <span className="qz-option-text">{option}</span>
+            {answered && i === q.answerIndex && <Icon name="check" size={18} />}
+            {answered && i === picked && i !== q.answerIndex && (
+              <Icon name="close" size={18} />
+            )}
+          </button>
+        ))}
+      </div>
 
       {answered && (
         <div className="qz-feedback">
@@ -83,6 +115,7 @@ export default function QuizPlayer({ questions, onFinish }: Props) {
       )}
 
       <div className="qz-actions">
+        <span className="qz-keys">Press A to D to answer, Enter for next</span>
         <button type="button" className="hm-primary" disabled={!answered} onClick={next}>
           {isLast ? "Finish quiz" : "Next question"}
         </button>
