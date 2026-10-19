@@ -12,11 +12,10 @@ import {
 } from "../../services/classroomService";
 import { ApiError } from "../../services/apiClient";
 
-const MAX_CLASSROOMS = 20;
+import Icon from "../../components/common/Icon";
+import FileBadge from "../../components/common/FileBadge";
 
-const TYPE_ICON: Record<Source["type"], string> = {
-  PDF: "📕", DOCX: "📘", PPT: "📙", EXCEL: "📗", WEB: "🌐",
-};
+const MAX_CLASSROOMS = 20;
 
 function typeLabel(source: Source): string {
   if (source.type === "WEB") return "Website";
@@ -119,7 +118,7 @@ function ClassroomCard({
   return (
     <div className="sx-card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div className="cr-card-icon">🏫</div>
+        <div className="cr-card-icon"><Icon name="classroom" size={20} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <strong className="cp-name">{room.name}</strong>
           <small className="cp-count">
@@ -133,7 +132,7 @@ function ClassroomCard({
           className="hm-primary hm-small"
           onClick={() => onChatOpen(room.id)}
         >
-          💬 Chat
+          Chat
         </button>
       </div>
 
@@ -149,7 +148,7 @@ function ClassroomCard({
           if (file) handleDrop(file);
         }}
       >
-        <span style={{ fontSize: 20 }}>📂</span>
+        <Icon name="upload" size={22} />
         <span style={{ fontSize: 13 }}>Drop a file here to add it to {room.name}</span>
       </div>
 
@@ -181,7 +180,7 @@ function ClassroomCard({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {docs.map((doc) => (
             <div key={doc.id} className="cp-doc">
-              <span style={{ fontSize: 16 }}>{TYPE_ICON[doc.type]}</span>
+              <FileBadge type={doc.type} />
               <span className="cp-doc-name">{doc.name}</span>
               <span className="kb-type">{typeLabel(doc)}</span>
               <button
@@ -284,7 +283,7 @@ export default function ClassroomPicker({
     <div className="page-content kb-page">
       <div className="kb-head">
         <div className="kb-title">
-          <div className="sx-header-icon">🏫</div>
+          <div className="sx-header-icon"><Icon name="classroom" size={24} /></div>
           <div>
             <h1>Classrooms</h1>
             <p>Manage documents and open chats for each classroom.</p>

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { Page, Source } from "../../types";
 import { deleteSource, fetchSourceContent } from "../../services/sourcesService";
 
+import Icon from "../../components/common/Icon";
+import FileBadge from "../../components/common/FileBadge";
+
 type KnowledgeBaseProps = {
   sources: Source[];
   refreshSources: () => Promise<void>;
@@ -13,14 +16,6 @@ type SortKey = "date" | "name" | "chunks" | "size";
 type PanelTab = "overview" | "content";
 
 const PAGE_SIZE = 10;
-
-const TYPE_ICON: Record<Source["type"], string> = {
-  PDF: "📕",
-  DOCX: "📘",
-  PPT: "📙",
-  EXCEL: "📗",
-  WEB: "🌐",
-};
 
 function typeLabel(source: Source): string {
   if (source.type === "WEB") return "Website";
@@ -169,7 +164,7 @@ export default function KnowledgeBase({
     <div className="page-content kb-page">
       <div className="kb-head">
         <div className="kb-title">
-          <div className="sx-header-icon">📦</div>
+          <div className="sx-header-icon"><Icon name="database" size={24} /></div>
           <div>
             <h1>Knowledge Base</h1>
             <p>
@@ -191,7 +186,7 @@ export default function KnowledgeBase({
 
       <div className="kb-stats">
         <div className="kb-stat">
-          <div className="kb-stat-icon">📄</div>
+          <div className="kb-stat-icon"><Icon name="file" size={22} /></div>
           <div>
             <span>Total Sources</span>
             <strong>{sources.length}</strong>
@@ -202,7 +197,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🗄️</div>
+          <div className="kb-stat-icon"><Icon name="layers" size={22} /></div>
           <div>
             <span>Total Chunks</span>
             <strong>{totalChunks.toLocaleString()}</strong>
@@ -211,7 +206,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🗂️</div>
+          <div className="kb-stat-icon"><Icon name="folder" size={22} /></div>
           <div>
             <span>File Types</span>
             <strong>{fileTypes.length}</strong>
@@ -220,7 +215,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🌐</div>
+          <div className="kb-stat-icon"><Icon name="globe" size={22} /></div>
           <div>
             <span>Web Sources</span>
             <strong>{websites.length}</strong>
@@ -333,7 +328,7 @@ export default function KnowledgeBase({
                       <td>
                         <div className="kb-name">
                           <span className="hm-file-icon">
-                            {TYPE_ICON[source.type]}
+                            <FileBadge type={source.type} />
                           </span>
                           <div>
                             <strong>{source.name}</strong>
@@ -408,7 +403,7 @@ export default function KnowledgeBase({
         {selected && (
           <aside className="sx-card kb-panel">
             <div className="kb-panel-head">
-              <span className="hm-file-icon">{TYPE_ICON[selected.type]}</span>
+              <span className="hm-file-icon"><FileBadge type={selected.type} /></span>
 
               <div className="hm-source-info">
                 <strong>{selected.name}</strong>
@@ -489,7 +484,7 @@ export default function KnowledgeBase({
                     className="kb-action"
                     onClick={() => setPanelTab("content")}
                   >
-                    👁️ View Content
+                    <Icon name="eye" size={15} /> View Content
                   </button>
 
                   <button
@@ -498,7 +493,7 @@ export default function KnowledgeBase({
                     disabled={busy}
                     onClick={() => removeSource(selected)}
                   >
-                    🗑️ Remove Source
+                    <Icon name="trash" size={15} /> Remove Source
                   </button>
                 </div>
               </>
