@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Page } from "../../types";
 import { API_BASE_URL } from "../../config/env";
+import { apiClient } from "../../services/apiClient";
+import { logout } from "../../services/authService";
 
 const TITLES: Record<Page, string> = {
   Dashboard: "Home",
@@ -19,6 +21,32 @@ export default function Topbar({
   onMenu: () => void;
 }) {
   const [online, setOnline] = useState<boolean | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState({ name: "", email: "" });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    apiClient("/auth/me")
+      .then((r) => r.json())
+      .then((u) => setUser({ name: u.name ?? "", email: u.email ?? "" }))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,18 +133,54 @@ export default function Topbar({
           &#128276;
         </button>
 
-        <button
-          type="button"
-          className="topbar-user"
-          onClick={() => {
-            window.location.hash = "/settings";
-          }}
-          aria-label="Open settings"
-          title="Settings"
-        >
-          <span className="topbar-avatar">U</span>
-          <span className="topbar-name">User</span>
-        </button>
+        <div className="user-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="topbar-user"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            <span className="topbar-avatar">
+              {user.name.charAt(0).toUpperCase() || "U"}
+            </span>
+            <span className="topbar-name">{user.name || "User"}</span>
+            <span className="topbar-caret">▾</span>
+          </button>
+
+          {menuOpen && (
+            <div className="user-dropdown" role="menu">
+              <div className="user-dropdown-head">
+                <strong>{user.name || "User"}</strong>
+                <small>{user.email}</small>
+              </div>
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.location.hash = "/settings";
+                }}
+              >
+                ⚙ Settings
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                className="danger"
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout();
+                  window.dispatchEvent(new Event("auth:logout"));
+                }}
+              >
+                ⎋ Log out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

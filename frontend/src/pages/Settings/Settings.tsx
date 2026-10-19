@@ -1,10 +1,11 @@
   import { useEffect, useState } from "react";
   import type { ReactNode } from "react";
   import { API_BASE_URL } from "../../config/env";
+  import { apiClient, ApiError } from "../../services/apiClient";
 
   type ThemeChoice = "light" | "dark" | "system";
   type BackendState = "checking" | "online" | "offline";
-  type TabKey = "general" | "kb" | "api";
+  type TabKey = "general" | "kb" | "api" | "account";
 
   const STORAGE_KEY = "ismart-settings";
 
@@ -19,6 +20,7 @@
     { key: "general", icon: "\u2699\uFE0F", title: "General", sub: "Appearance" },
     { key: "kb", icon: "\uD83D\uDDC4\uFE0F", title: "Knowledge Base", sub: "Storage and processing" },
     { key: "api", icon: "\uD83D\uDD17", title: "API & Models", sub: "Backend connection" },
+    { key: "account", icon: "\uD83D\uDC64", title: "User Config", sub: "Change password" },
   ];
 
   function loadTheme(): ThemeChoice {
@@ -104,6 +106,60 @@
     const [theme, setTheme] = useState<ThemeChoice>(loadTheme);
     const [tab, setTab] = useState<TabKey>("general");
     const [backend, setBackend] = useState<BackendState>("checking");
+
+      const [currentPw, setCurrentPw] = useState("");
+      const [newPw, setNewPw] = useState("");
+      const [confirmPw, setConfirmPw] = useState("");
+      const [showPw, setShowPw] = useState(false);
+      const [pwBusy, setPwBusy] = useState(false);
+      const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+      const changePassword = async () => {
+        setPwMsg(null);
+
+        if (newPw.length < 8) {
+          setPwMsg({ ok: false, text: "New password must be at least 8 characters." });
+          return;
+        }
+        if (new TextEncoder().encode(newPw).length > 72) {
+          setPwMsg({ ok: false, text: "New password must be at most 72 bytes." });
+          return;
+        }
+        if (newPw !== confirmPw) {
+          setPwMsg({ ok: false, text: "New passwords do not match." });
+          return;
+        }
+        if (newPw === currentPw) {
+          setPwMsg({ ok: false, text: "New password must be different from the current one." });
+          return;
+        }
+
+        setPwBusy(true);
+        try {
+          await apiClient("/auth/change-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              current_password: currentPw,
+              new_password: newPw,
+            }),
+          });
+          setCurrentPw("");
+          setNewPw("");
+          setConfirmPw("");
+          setPwMsg({ ok: true, text: "Password changed successfully." });
+        } catch (err) {
+          setPwMsg({
+            ok: false,
+            text:
+              err instanceof ApiError && err.detail
+                ? err.detail
+                : "Could not change the password. Is the backend running?",
+          });
+        } finally {
+          setPwBusy(false);
+        }
+      };
 
     useEffect(() => {
       try {
@@ -269,6 +325,85 @@
                 </div>
               </section>
             )}
+
+            {tab === "account" && (
+                <section className="sx-card">
+                  <CardHead
+                    icon={"\uD83D\uDC64"}
+                    title="User Config"
+                    sub="Change the password for your account."
+                  />
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      changePassword();
+                    }}
+                  >
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">Current password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={currentPw}
+                        onChange={(e) => setCurrentPw(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">New password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={newPw}
+                        onChange={(e) => setNewPw(e.target.value)}
+                      />
+                      <span className="sx-hint">At least 8 characters.</span>
+                    </div>
+
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">Confirm new password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={confirmPw}
+                        onChange={(e) => setConfirmPw(e.target.value)}
+                      />
+                    </div>
+
+                    <label
+                      className="sx-hint"
+                      style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showPw}
+                        onChange={(e) => setShowPw(e.target.checked)}
+                      />
+                      Show passwords
+                    </label>
+
+                    {pwMsg && (
+                      <p className={pwMsg.ok ? "sx-note" : "hm-error"} style={{ marginTop: 12 }}>
+                        {pwMsg.text}
+                      </p>
+                    )}
+
+                    <div className="sx-check">
+                      <button
+                        type="submit"
+                        className="hm-primary"
+                        disabled={pwBusy || !currentPw || !newPw || !confirmPw}
+                      >
+                        {pwBusy ? "Saving..." : "Change password"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+              )}
 
             {tab === "api" && (
               <section className="sx-card">

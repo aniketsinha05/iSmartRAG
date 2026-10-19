@@ -10,12 +10,18 @@ export default function AuthPage({ onAuthenticated }: { onAuthenticated: () => v
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    if (!isLogin && password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     try {
       if (isLogin) await login(email.trim(), password);
@@ -48,14 +54,37 @@ export default function AuthPage({ onAuthenticated }: { onAuthenticated: () => v
             <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
           )}
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <input
-            type="password"
-            placeholder="Password (min 8 characters)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={isLogin ? undefined : 8}
-          />
+          <div className="pw-field">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={isLogin ? "Password" : "Password (min 8 characters)"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={isLogin ? undefined : 8}
+            />
+            <button
+              type="button"
+              className="pw-toggle"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          {!isLogin && (
+            <div className="pw-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirm password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+          )}
 
           {error && <p className="auth-error">{error}</p>}
 
@@ -65,7 +94,7 @@ export default function AuthPage({ onAuthenticated }: { onAuthenticated: () => v
 
           <p className="auth-switch">
             {isLogin ? "No account yet? " : "Already registered? "}
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setError(""); }}>
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setError(""); setConfirm(""); }}>
               {isLogin ? "Sign up" : "Log in"}
             </button>
           </p>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import App from "./App";
 import AuthPage from "./pages/Auth/AuthPage";
 import { getToken } from "./services/tokenStore";
-import { logout } from "./services/authService";
+
 
 export default function AuthGate() {
   const [token, setTokenState] = useState<string | null>(getToken);
@@ -20,9 +20,6 @@ export default function AuthGate() {
 
   return (
     <>
-      <button className="logout-btn" onClick={() => { logout(); setTokenState(null); }}>
-        Logout
-      </button>
       {/* key={token}: a new login remounts the app, so no old user's data lingers */}
       <App key={token} />
     </>
