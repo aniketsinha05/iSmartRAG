@@ -1,6 +1,7 @@
 import type { Page } from "../../types";
 import { menuItems } from "../../constants/navigation";
 import vioraLogo from "../../assets/viora glowing logo.png";
+import Icon from "../common/Icon";
 
 const DISPLAY_NAME: Record<string, string> = {
   Dashboard: "Home",
@@ -24,20 +25,12 @@ export default function Sidebar({
         <div className="sidebar-brand">
           <img
             src={vioraLogo}
-            alt="VIORA logo"
-            style={{           
-              width: "52px",
-              height: "52px",
-              objectFit: "contain",
-              background: "transparent",
-              padding: 0,
-              borderRadius: 0,
-            }}
+            alt="Viora logo"
+            style={{ width: 52, height: 52, objectFit: "contain", background: "transparent" }}
           />
-
           <div className="sidebar-brand-text">
             <strong>VIORA</strong>
-            <span>Your Personal Assistant</span>
+            <span>A little beyond ordinary</span>
           </div>
         </div>
 
@@ -53,7 +46,9 @@ export default function Sidebar({
                 if (window.innerWidth <= 900) setCollapsed(true);
               }}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon">
+                <Icon name={item.icon} size={18} />
+              </span>
               {DISPLAY_NAME[item.label] ?? item.label}
             </button>
           ))}
