@@ -2,6 +2,7 @@ import { apiClient } from "./apiClient";
 import type { Source } from "../types";
 
 export type ApiSource = {
+  id: number;
   name: string;
   type: string;
   chunks: number;
@@ -33,6 +34,7 @@ export function formatSize(bytes: number | null | undefined): string {
 
 export function toSource(item: ApiSource): Source {
   return {
+    id: item.id,
     name: item.name,
     type: toSourceType(item.type, item.name),
     size: formatSize(item.size_bytes),
@@ -49,17 +51,13 @@ export async function fetchSources(): Promise<Source[]> {
   return (data.sources as ApiSource[]).map(toSource);
 }
 
-export async function fetchSourceContent(name: string): Promise<string[]> {
-  const response = await apiClient(
-    `/sources/content?name=${encodeURIComponent(name)}&limit=20`
-  );
+export async function fetchSourceContent(id: number): Promise<string[]> {
+  const response = await apiClient(`/sources/${id}/content?limit=20`);
   const data = await response.json();
 
   return data.chunks as string[];
 }
 
-export async function deleteSourceByName(name: string) {
-  await apiClient(`/sources?name=${encodeURIComponent(name)}`, {
-    method: "DELETE",
-  });
+export async function deleteSource(id: number) {
+  await apiClient(`/sources/${id}`, { method: "DELETE" });
 }

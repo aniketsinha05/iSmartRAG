@@ -1,19 +1,18 @@
 import os
-import json
 import threading
 
 import faiss
 import numpy as np
-from datetime import datetime, timezone
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
+
+from backend.models import KnowledgeBase, VectorChunk
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE, "faiss_db")
 os.makedirs(DB_DIR, exist_ok=True)
 
-INDEX_PATH = os.path.join(DB_DIR, "index.faiss")
-META_PATH = os.path.join(DB_DIR, "records.json")
-VEC_PATH = os.path.join(DB_DIR, "vectors.npy")
 DIM = 384
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
@@ -22,6 +21,8 @@ _models = {}  # the bge model is loaded the first time it is needed
 _splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=120)
 _lock = threading.Lock()
 
+
+# ---------- embedding (unchanged) ----------
 
 def _empty():
     return np.zeros((0, DIM), dtype="float32")
@@ -57,17 +58,32 @@ def _embed(texts, is_query=False):
     return torch.cat(out).numpy().astype("float32")
 
 
-def _load():
-    if os.path.exists(META_PATH) and os.path.exists(VEC_PATH):
-        with open(META_PATH, encoding="utf-8") as f:
-            records = json.load(f)
-        if records and records[0].get("model") != MODEL_NAME:
-            raise RuntimeError(
-                "The saved index was made with a different embedding model. "
-                "Delete the backend/faiss_db folder and upload your files again."
-            )
-        return records, np.load(VEC_PATH)
-    return [], _empty()
+# ---------- per-user vector files ----------
+
+def _vec_path(user_id):
+    folder = os.path.join(DB_DIR, f"user_{int(user_id)}")
+    os.makedirs(folder, exist_ok=True)
+    return os.path.join(folder, "vectors.npz")
+
+
+def _load_vecs(user_id):
+    path = _vec_path(user_id)
+    if not os.path.exists(path):
+        return _empty(), []
+    with np.load(path) as data:
+        return data["vecs"], [str(i) for i in data["ids"]]
+
+
+def _save_vecs(user_id, vecs, ids):
+    path = _vec_path(user_id)
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        np.savez(f, vecs=vecs, ids=np.array(ids, dtype="U64"))
+    os.replace(tmp, path)
+
+
+def _doc_id_of(chunk_id):
+    return int(chunk_id.split("_", 1)[0])
 
 
 def _build_index(vecs):
@@ -81,141 +97,190 @@ def chunk_text(text):
     return [c.strip() for c in _splitter.split_text(text) if c.strip()]
 
 
-def add_document(text, source, doc_type):
-    return add_pieces([{"text": text}], source, doc_type)
+# ---------- public functions ----------
+
+def add_document(db: Session, user_id, text, source, doc_type, size_bytes=None):
+    return add_pieces(db, user_id, [{"text": text}], source, doc_type, size_bytes)
 
 
-def add_pieces(pieces, source, doc_type):
-    """pieces: [{"text", "page"?, "sheet"?, "rows"?, "section"?, "split"?}]"""
+def add_pieces(db: Session, user_id, pieces, source, doc_type, size_bytes=None):
+    """pieces: [{"text", "page"?, "sheet"?, "rows"?, "section"?, "split"?}]
+    Returns (document_id, chunk_count). (None, 0) if there was no text.
+    Uploading the same filename again replaces that document (same id)."""
     chunks = []  # (chunk text, piece)
     for p in pieces:
         parts = chunk_text(p["text"]) if p.get("split", True) else [p["text"].strip()]
         chunks += [(part, p) for part in parts if part]
 
     if not chunks:
-        return 0
+        return None, 0
 
     # the section heading is added to the text that is embedded (not to the stored text)
-    new_vecs = _embed([(p["section"] + "\n" if p.get("section") else "") + t for t, p in chunks])
-    now = datetime.now(timezone.utc).isoformat()
+    new_vecs = _embed(
+        [(p["section"] + "\n" if p.get("section") else "") + t for t, p in chunks]
+    )
 
     with _lock:
-        records, vecs = _load()
+        doc = db.scalar(
+            select(KnowledgeBase).where(
+                KnowledgeBase.user_id == user_id, KnowledgeBase.name == source
+            )
+        )
+        if doc is None:
+            doc = KnowledgeBase(user_id=user_id, name=source, type=doc_type)
+            db.add(doc)
+            db.flush()
+        else:
+            db.execute(delete(VectorChunk).where(VectorChunk.document_id == doc.id))
 
-        # remove old chunks of the same source (re-upload = replace)
-        keep = [i for i, r in enumerate(records) if r["source"] != source]
-        records = [records[i] for i in keep]
+        doc_id = doc.id
+        doc.type = doc_type
+        doc.chunks = len(chunks)
+        if size_bytes is not None:
+            doc.size_bytes = size_bytes
+
+        new_ids = [f"{doc_id}_{i}" for i in range(len(chunks))]
+        for cid, (text, p) in zip(new_ids, chunks):
+            db.add(VectorChunk(
+                id=cid,
+                document_id=doc_id,
+                text=text,
+                page=p.get("page"),
+                sheet=p.get("sheet"),
+                rows=str(p["rows"]) if p.get("rows") is not None else None,
+                section=p.get("section"),
+                model=MODEL_NAME,
+            ))
+
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        vecs, ids = _load_vecs(user_id)
+        keep = [i for i, cid in enumerate(ids) if _doc_id_of(cid) != doc_id]
         vecs = vecs[keep] if keep else _empty()
+        ids = [ids[i] for i in keep]
+        _save_vecs(user_id, np.vstack([vecs, new_vecs]), ids + new_ids)
 
-        for i, (chunk, p) in enumerate(chunks):
-            rec = {
-                "id": f"{source}_{i}",
-                "text": chunk,
-                "source": source,
-                "type": doc_type,
-                "added_at": now,
-                "model": MODEL_NAME,
-            }
-            for key in ("page", "sheet", "rows", "section"):
-                if p.get(key) is not None:
-                    rec[key] = p[key]
-            if doc_type == "website":
-                rec["url"] = source
-            records.append(rec)
-        vecs = np.vstack([vecs, new_vecs])
-
-        _save(records, vecs)
-
-    return len(chunks)
+    return doc_id, len(chunks)
 
 
-def _meta(r):
-    return {k: v for k, v in r.items() if k not in ("id", "text", "model")}
+def search(db: Session, user_id, query, n_results=3, document_ids=None):
+    """Only ever searches this user's vectors.
+    document_ids=None searches all of the user's documents. A list limits the search
+    to those documents (an empty list returns nothing) - this is how classrooms stay isolated."""
+    empty = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
 
-
-def search(query, n_results=3, sources=None):
-    """sources=None searches everything. A list limits the search to those documents
-    (an empty list returns nothing). This is how classrooms stay isolated."""
     with _lock:
-        records, vecs = _load()
+        vecs, ids = _load_vecs(user_id)
 
-    if sources is not None:
-        allowed = set(sources)
-        keep = [i for i, r in enumerate(records) if r["source"] in allowed]
-        records = [records[i] for i in keep]
+    if document_ids is not None:
+        allowed = {int(i) for i in document_ids}
+        keep = [i for i, cid in enumerate(ids) if _doc_id_of(cid) in allowed]
         vecs = vecs[keep] if keep else _empty()
+        ids = [ids[i] for i in keep]
 
-    if not records:
-        return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+    if not ids:
+        return empty
 
     index = _build_index(vecs)
-    k = min(n_results, len(records))
-    scores, ids = index.search(_embed([query], is_query=True), k)
+    k = min(n_results, len(ids))
+    scores, idx = index.search(_embed([query], is_query=True), k)
+    found = [(float(s), ids[i]) for s, i in zip(scores[0], idx[0]) if i != -1]
+    if not found:
+        return empty
 
-    found = [(s, i) for s, i in zip(scores[0], ids[0]) if i != -1]
+    rows = db.execute(
+        select(VectorChunk, KnowledgeBase)
+        .join(KnowledgeBase, KnowledgeBase.id == VectorChunk.document_id)
+        .where(
+            VectorChunk.id.in_([cid for _, cid in found]),
+            KnowledgeBase.user_id == user_id,  # second safety check
+        )
+    ).all()
+    by_id = {c.id: (c, d) for c, d in rows}
+
+    out_ids, out_docs, out_meta, out_dist = [], [], [], []
+    for score, cid in found:
+        if cid not in by_id:
+            continue
+        chunk, doc = by_id[cid]
+        meta = {
+            "source": doc.name,
+            "document_id": doc.id,
+            "type": doc.type,
+            "added_at": doc.added_at.isoformat() if doc.added_at else None,
+        }
+        for key in ("page", "sheet", "rows", "section"):
+            if getattr(chunk, key) is not None:
+                meta[key] = getattr(chunk, key)
+        if doc.type == "website":
+            meta["url"] = doc.name
+        out_ids.append(cid)
+        out_docs.append(chunk.text)
+        out_meta.append(meta)
+        out_dist.append(1 - score)
+
     return {
-        "ids": [[records[i]["id"] for _, i in found]],
-        "documents": [[records[i]["text"] for _, i in found]],
-        "metadatas": [[_meta(records[i]) for _, i in found]],
-        "distances": [[float(1 - s) for s, _ in found]],
+        "ids": [out_ids],
+        "documents": [out_docs],
+        "metadatas": [out_meta],
+        "distances": [out_dist],
     }
 
 
-def _save(records, vecs):
-    index = _build_index(vecs)
+def list_sources(db: Session, user_id):
+    docs = db.scalars(
+        select(KnowledgeBase)
+        .where(KnowledgeBase.user_id == user_id)
+        .order_by(KnowledgeBase.id)
+    ).all()
+    return [
+        {
+            "id": d.id,
+            "name": d.name,
+            "type": d.type,
+            "chunks": d.chunks or 0,
+            "added_at": d.added_at.isoformat() if d.added_at else None,
+            "size_bytes": d.size_bytes,
+        }
+        for d in docs
+    ]
 
-    with open(META_PATH, "w", encoding="utf-8") as f:
-        json.dump(records, f)
 
-    np.save(VEC_PATH, vecs)
-    faiss.write_index(index, INDEX_PATH)
+def get_source_chunks(db: Session, user_id, document_id, limit=20):
+    rows = db.execute(
+        select(VectorChunk.id, VectorChunk.text)
+        .join(KnowledgeBase, KnowledgeBase.id == VectorChunk.document_id)
+        .where(KnowledgeBase.id == document_id, KnowledgeBase.user_id == user_id)
+    ).all()
+    rows.sort(key=lambda r: int(r[0].split("_", 1)[1]))  # original chunk order
+    return [text for _, text in rows][:limit]
 
 
-def list_sources():
+def delete_source(db: Session, user_id, document_id):
+    """Returns the number of chunks removed, or None if the document is not this user's.
+    The database also removes the chunk rows and classroom links (ON DELETE CASCADE)."""
     with _lock:
-        records, _ = _load()
-
-    grouped = {}
-
-    for r in records:
-        item = grouped.setdefault(
-            r["source"],
-            {
-                "name": r["source"],
-                "type": r["type"],
-                "chunks": 0,
-                "added_at": r.get("added_at"),
-            },
+        doc = db.scalar(
+            select(KnowledgeBase).where(
+                KnowledgeBase.id == document_id, KnowledgeBase.user_id == user_id
+            )
         )
-        item["chunks"] += 1
+        if doc is None:
+            return None
+        removed = doc.chunks or 0
+        db.delete(doc)
+        db.commit()
 
-    return list(grouped.values())
-
-
-def get_source_chunks(source, limit=20):
-    with _lock:
-        records, _ = _load()
-
-    return [r["text"] for r in records if r["source"] == source][:limit]
-
-
-def delete_source(source):
-    with _lock:
-        records, vecs = _load()
-
-        keep = [i for i, r in enumerate(records) if r["source"] != source]
-        removed = len(records) - len(keep)
-
-        if removed == 0:
-            return 0
-
-        records = [records[i] for i in keep]
-        vecs = vecs[keep] if keep else _empty()
-        _save(records, vecs)
-
+        vecs, ids = _load_vecs(user_id)
+        keep = [i for i, cid in enumerate(ids) if _doc_id_of(cid) != document_id]
+        if len(keep) != len(ids):
+            _save_vecs(
+                user_id,
+                vecs[keep] if keep else _empty(),
+                [ids[i] for i in keep],
+            )
     return removed
-
-if __name__ == "__main__":
-    n = add_document("FAISS is a library for fast similarity search of vectors.", "test.txt", "test")
-    print("Stored chunks:", n)
-    print(search("what is FAISS?", 1)["documents"][0])

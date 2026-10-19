@@ -10,6 +10,7 @@ import {
   renameClassroom,
   deleteClassroom,
 } from "../../services/classroomService";
+import { ApiError } from "../../services/apiClient";
 
 const MAX_CLASSROOMS = 20;
 
@@ -24,22 +25,30 @@ function typeLabel(source: Source): string {
   return source.type;
 }
 
+// Show the server's message (e.g. "A classroom with this name already exists.")
+function errText(e: unknown, fallback: string): string {
+  if (e instanceof ApiError && e.detail) return e.detail;
+  return fallback;
+}
+
 type ClassroomCardProps = {
   room: Classroom;
   allSources: Source[];
   onChatOpen: (id: number) => void;
   onRename: (room: Classroom) => void;
   onDelete: (room: Classroom) => void;
+  onChanged: () => void;
+  refreshSources: () => Promise<void>;
 };
 
 function ClassroomCard({
-  room, allSources, onChatOpen, onRename, onDelete,
+  room, allSources, onChatOpen, onRename, onDelete, onChanged, refreshSources,
 }: ClassroomCardProps) {
   const [docs, setDocs] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<number | "">("");
   const [dragging, setDragging] = useState(false);
 
   const load = useCallback(async () => {
@@ -56,33 +65,35 @@ function ClassroomCard({
   useEffect(() => { load(); }, [load]);
 
   const available = allSources.filter(
-    (s) => !docs.some((d) => d.name === s.name),
+    (s) => !docs.some((d) => d.id === s.id),
   );
 
   const addFromKB = async () => {
-    if (!selected || busy) return;
+    if (selected === "" || busy) return;
     setBusy(true);
     setMessage("");
     try {
       await importDocuments(room.id, [selected]);
       setSelected("");
       await load();
+      onChanged();
       setMessage(`Added to ${room.name}.`);
-    } catch {
-      setMessage("Could not add document.");
+    } catch (e) {
+      setMessage(errText(e, "Could not add document."));
     } finally {
       setBusy(false);
     }
   };
 
-  const removeDoc = async (name: string) => {
+  const removeDoc = async (id: number) => {
     if (busy) return;
     setBusy(true);
     try {
-      await removeClassroomDocument(room.id, name);
+      await removeClassroomDocument(room.id, id);
       await load();
-    } catch {
-      setMessage("Could not remove document.");
+      onChanged();
+    } catch (e) {
+      setMessage(errText(e, "Could not remove document."));
     } finally {
       setBusy(false);
     }
@@ -95,9 +106,11 @@ function ClassroomCard({
     try {
       await uploadToClassroom(room.id, file);
       await load();
+      await refreshSources();
+      onChanged();
       setMessage(`${file.name} added.`);
-    } catch {
-      setMessage("Upload failed.");
+    } catch (e) {
+      setMessage(errText(e, "Upload failed."));
     } finally {
       setBusy(false);
     }
@@ -145,15 +158,15 @@ function ClassroomCard({
           className="sx-select"
           style={{ flex: 1 }}
           value={selected}
-          onChange={(e) => setSelected(e.target.value)}
+          onChange={(e) => setSelected(e.target.value === "" ? "" : Number(e.target.value))}
           disabled={busy || !available.length}
         >
           <option value="">
             {available.length ? "Select from Knowledge Base..." : "No new sources in Knowledge Base"}
           </option>
-          {available.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
+          {available.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <button className="hm-primary" disabled={!selected || busy} onClick={addFromKB}>
+        <button className="hm-primary" disabled={selected === "" || busy} onClick={addFromKB}>
           + Add
         </button>
       </div>
@@ -167,7 +180,7 @@ function ClassroomCard({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {docs.map((doc) => (
-            <div key={doc.name} className="cp-doc">
+            <div key={doc.id} className="cp-doc">
               <span style={{ fontSize: 16 }}>{TYPE_ICON[doc.type]}</span>
               <span className="cp-doc-name">{doc.name}</span>
               <span className="kb-type">{typeLabel(doc)}</span>
@@ -176,7 +189,7 @@ function ClassroomCard({
                 className="hm-x"
                 aria-label={`Remove ${doc.name} from classroom`}
                 disabled={busy}
-                onClick={() => removeDoc(doc.name)}
+                onClick={() => removeDoc(doc.id)}
               >✕</button>
             </div>
           ))}
@@ -224,7 +237,7 @@ export default function ClassroomPicker({
       setName("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create classroom.");
+      setError(errText(e, "Could not create classroom."));
     } finally {
       setBusy(false);
     }
@@ -239,7 +252,7 @@ export default function ClassroomPicker({
       await renameClassroom(room.id, value.trim());
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not rename classroom.");
+      setError(errText(e, "Could not rename classroom."));
     } finally {
       setBusy(false);
     }
@@ -253,7 +266,7 @@ export default function ClassroomPicker({
       await deleteClassroom(room.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete classroom.");
+      setError(errText(e, "Could not delete classroom."));
     } finally {
       setBusy(false);
     }
@@ -303,7 +316,11 @@ export default function ClassroomPicker({
       {loading && <div className="hm-empty">Loading classrooms...</div>}
       {error && <p className="hm-error">{error}</p>}
 
-      {!loading && !error && (
+      {!loading && classrooms.length === 0 && !error && (
+        <div className="hm-empty">No classrooms yet. Create your first one above.</div>
+      )}
+
+      {!loading && (
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
@@ -317,6 +334,8 @@ export default function ClassroomPicker({
               onChatOpen={openChat}
               onRename={rename}
               onDelete={remove}
+              onChanged={() => void load()}
+              refreshSources={refreshSources}
             />
           ))}
         </div>

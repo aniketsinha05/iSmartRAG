@@ -5,11 +5,12 @@ import { uploadFile } from "../../services/uploadService";
 import { addWebsite } from "../../services/websiteService";
 import { searchDocuments } from "../../services/searchService";
 import { askQuestion } from "../../services/askService";
+import { ApiError } from "../../services/apiClient";
 
 type DashboardProps = {
   setPage: (page: Page) => void;
   sources: Source[];
-  setSources: Dispatch<SetStateAction<Source[]>>;
+  refreshSources: () => Promise<void>;
   questionCount: number;
   setQuestionCount: Dispatch<SetStateAction<number>>;
 };
@@ -29,19 +30,6 @@ const TYPE_ICON: Record<Source["type"], string> = {
   EXCEL: "📗",
   WEB: "🌐",
 };
-
-function sourceTypeFromName(name: string): Source["type"] {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-
-  if (ext === "docx" || ext === "doc") return "DOCX";
-  if (ext === "ppt" || ext === "pptx") return "PPT";
-
-  if (["xlsx", "xls", "xlsm", "xltx", "csv"].includes(ext)) {
-    return "EXCEL";
-  }
-
-  return "PDF";
-}
 
 function resultIcon(type: string | null): string {
   const t = (type ?? "").toLowerCase();
@@ -64,7 +52,7 @@ function matchPercent(distance: number | null): number {
 export default function Dashboard({
   setPage,
   sources,
-  setSources,
+  refreshSources,
   questionCount,
   setQuestionCount,
 }: DashboardProps) {
@@ -86,13 +74,6 @@ export default function Dashboard({
   const addRef = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const rememberSource = (source: Source) => {
-    setSources((current) => [
-      ...current.filter((item) => item.name !== source.name),
-      source,
-    ]);
-  };
-
   const handleFile = async (file: File | undefined) => {
     if (!file || busy) return;
 
@@ -102,17 +83,17 @@ export default function Dashboard({
     try {
       const data = await uploadFile(file);
 
-      rememberSource({
-        name: file.name,
-        type: sourceTypeFromName(file.name),
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        chunks: data.chunks,
-      });
+      // reload from the server so the new source has its real id
+      await refreshSources();
 
       setAddStatus(`${file.name} added (${data.chunks} chunks).`);
     } catch (error) {
       console.error(error);
-      setAddStatus("Upload failed. Please try again.");
+      setAddStatus(
+        error instanceof ApiError && error.detail
+          ? error.detail
+          : "Upload failed. Please try again."
+      );
     } finally {
       setBusy(false);
     }
@@ -129,18 +110,17 @@ export default function Dashboard({
     try {
       const data = await addWebsite(clean);
 
-      rememberSource({
-        name: data.url ?? clean,
-        type: "WEB",
-        size: "Website",
-        chunks: data.chunks,
-      });
+      await refreshSources();
 
       setUrl("");
       setAddStatus(`Website added (${data.chunks} chunks).`);
     } catch (error) {
       console.error(error);
-      setAddStatus("Could not add the website. Please try again.");
+      setAddStatus(
+        error instanceof ApiError && error.detail
+          ? error.detail
+          : "Could not add the website. Please try again."
+      );
     } finally {
       setBusy(false);
     }
@@ -370,7 +350,7 @@ export default function Dashboard({
               <div className="sx-card-icon">📁</div>
               <div>
                 <h3>Knowledge Base</h3>
-                <p>{sources.length} sources this session</p>
+                <p>{sources.length} sources</p>
               </div>
             </div>
 
@@ -420,7 +400,7 @@ export default function Dashboard({
             )}
 
             {shown.map((source) => (
-              <div key={source.name} className="hm-source">
+              <div key={source.id} className="hm-source">
                 <span className="hm-file-icon">{TYPE_ICON[source.type]}</span>
 
                 <div className="hm-source-info">

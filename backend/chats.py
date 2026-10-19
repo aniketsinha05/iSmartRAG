@@ -1,119 +1,130 @@
 """
 chats.py
-Chat history of the classrooms, saved in backend/chats.json (a list of chats per classroom).
-A chat belongs to ONE classroom: a chat id from another classroom is never found.
+Chat history, stored in PostgreSQL (tables chats and chat_messages).
+A chat belongs to ONE user and ONE classroom (or to no classroom = general chat).
+classroom_id 0 or None both mean "general chat", so the old GENERAL_CHAT_BUCKET = 0 still works.
 """
 
-import json
-import os
-import threading
 import uuid
-from datetime import datetime, timezone
 
-BASE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(BASE, "chats.json")
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
-_lock = threading.Lock()
-
-
-def _load():
-    if os.path.exists(PATH):
-        with open(PATH, encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+from backend.models import Chat, ChatMessage, Classroom
 
 
-def _save(data):
-    with open(PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def _cid(classroom_id):
+    return None if classroom_id in (None, 0) else classroom_id
 
 
-def _now():
-    return datetime.now(timezone.utc).isoformat()
+def _scope(classroom_id):
+    cid = _cid(classroom_id)
+    return Chat.classroom_id.is_(None) if cid is None else Chat.classroom_id == cid
 
 
-def _find(data, classroom_id, chat_id):
-    return next((c for c in data.get(str(classroom_id), []) if c["id"] == chat_id), None)
+def _iso(value):
+    return value.isoformat() if value else None
 
 
-def list_chats(classroom_id):
+def _find(db: Session, user_id, classroom_id, chat_id):
+    return db.scalar(
+        select(Chat).where(
+            Chat.id == chat_id, Chat.user_id == user_id, _scope(classroom_id)
+        )
+    )
+
+
+def list_chats(db: Session, user_id, classroom_id):
     """Newest first. Messages are not included (use get_chat)."""
-    with _lock:
-        chats = _load().get(str(classroom_id), [])
-
-    items = [
+    rows = db.execute(
+        select(Chat, func.count(ChatMessage.id))
+        .outerjoin(ChatMessage, ChatMessage.chat_id == Chat.id)
+        .where(Chat.user_id == user_id, _scope(classroom_id))
+        .group_by(Chat.id)
+        .order_by(Chat.updated_at.desc())
+    ).all()
+    return [
         {
-            "id": c["id"],
-            "title": c["title"],
-            "updated_at": c["updated_at"],
-            "message_count": len(c["messages"]),
+            "id": c.id,
+            "title": c.title,
+            "updated_at": _iso(c.updated_at),
+            "message_count": n,
         }
-        for c in chats
+        for c, n in rows
     ]
-    return sorted(items, key=lambda c: c["updated_at"], reverse=True)
 
 
-def get_chat(classroom_id, chat_id):
-    with _lock:
-        return _find(_load(), classroom_id, chat_id)
+def get_chat(db: Session, user_id, classroom_id, chat_id):
+    chat = _find(db, user_id, classroom_id, chat_id)
+    if chat is None:
+        return None
+    msgs = db.scalars(
+        select(ChatMessage).where(ChatMessage.chat_id == chat.id).order_by(ChatMessage.id)
+    ).all()
+    return {
+        "id": chat.id,
+        "title": chat.title,
+        "created_at": _iso(chat.created_at),
+        "updated_at": _iso(chat.updated_at),
+        "messages": [{"role": m.role, "text": m.text} for m in msgs],
+    }
 
 
-def create_chat(classroom_id):
-    with _lock:
-        data = _load()
-        chat = {
-            "id": uuid.uuid4().hex[:12],
-            "title": "New chat",
-            "created_at": _now(),
-            "updated_at": _now(),
-            "messages": [],
-        }
-        data.setdefault(str(classroom_id), []).append(chat)
-        _save(data)
-    return chat
+def create_chat(db: Session, user_id, classroom_id):
+    """Returns None if the classroom is not this user's."""
+    cid = _cid(classroom_id)
+    if cid is not None:
+        owned = db.scalar(
+            select(Classroom.id).where(Classroom.id == cid, Classroom.user_id == user_id)
+        )
+        if owned is None:
+            return None
+
+    chat = Chat(id=uuid.uuid4().hex[:12], user_id=user_id, classroom_id=cid, title="New chat")
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+    return {
+        "id": chat.id,
+        "title": chat.title,
+        "created_at": _iso(chat.created_at),
+        "updated_at": _iso(chat.updated_at),
+        "messages": [],
+    }
 
 
-def add_messages(classroom_id, chat_id, messages):
-    """messages: [{"role": "user" | "ai", "text": str}]. False if the chat is not in this classroom."""
-    with _lock:
-        data = _load()
-        chat = _find(data, classroom_id, chat_id)
+def add_messages(db: Session, user_id, classroom_id, chat_id, messages):
+    """messages: [{"role": "user" | "ai", "text": str}]. False if the chat is not found."""
+    chat = _find(db, user_id, classroom_id, chat_id)
+    if chat is None:
+        return False
 
-        if chat is None:
-            return False
+    existing = db.scalar(
+        select(func.count()).select_from(ChatMessage).where(ChatMessage.chat_id == chat.id)
+    )
+    if existing == 0 and messages:
+        first = messages[0]["text"].strip()
+        chat.title = first if len(first) <= 60 else first[:57] + "..."
 
-        if not chat["messages"] and messages:
-            first = messages[0]["text"].strip()
-            chat["title"] = first if len(first) <= 60 else first[:57] + "..."
-
-        chat["messages"] += messages
-        chat["updated_at"] = _now()
-        _save(data)
+    for m in messages:
+        db.add(ChatMessage(chat_id=chat.id, role=m["role"], text=m["text"]))
+    chat.updated_at = func.now()
+    db.commit()
     return True
 
 
-def delete_chat(classroom_id, chat_id):
-    with _lock:
-        data = _load()
-        chat = _find(data, classroom_id, chat_id)
-
-        if chat is None:
-            return False
-
-        data[str(classroom_id)].remove(chat)
-        _save(data)
+def delete_chat(db: Session, user_id, classroom_id, chat_id):
+    chat = _find(db, user_id, classroom_id, chat_id)
+    if chat is None:
+        return False
+    db.delete(chat)  # messages are removed by ON DELETE CASCADE
+    db.commit()
     return True
 
 
-
-
-
-
-def delete_classroom_chats(classroom_id):
-    with _lock:
-        data = _load()
-        if str(classroom_id) not in data:
-            return False
-        del data[str(classroom_id)]
-        _save(data)
-    return True
+def delete_classroom_chats(db: Session, user_id, classroom_id):
+    result = db.execute(
+        delete(Chat).where(Chat.user_id == user_id, Chat.classroom_id == classroom_id)
+    )
+    db.commit()
+    return result.rowcount > 0
