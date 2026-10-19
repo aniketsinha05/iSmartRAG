@@ -59,7 +59,7 @@ export default function ClassroomPage({
   const [busy, setBusy] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [picked, setPicked] = useState<number[]>([]);
   const [pickSearch, setPickSearch] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -94,7 +94,7 @@ export default function ClassroomPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [importOpen]);
 
-  const inClassroom = new Set(docs.map((d) => d.name));
+  const inClassroom = new Set(docs.map((d) => d.id));
 
   const available = sources.filter((s) =>
     s.name.toLowerCase().includes(pickSearch.trim().toLowerCase())
@@ -106,11 +106,11 @@ export default function ClassroomPage({
     setImportOpen(true);
   };
 
-  const togglePick = (name: string) => {
+  const togglePick = (id: number) => {
     setPicked((current) =>
-      current.includes(name)
-        ? current.filter((n) => n !== name)
-        : [...current, name]
+      current.includes(id)
+        ? current.filter((n) => n !== id)
+        : [...current, id]
     );
   };
 
@@ -144,7 +144,7 @@ export default function ClassroomPage({
     setBusy(true);
     setMessage("");
     try {
-      await removeClassroomDocument(classroomId, doc.name);
+      await removeClassroomDocument(classroomId, doc.id);
       await load();
       setMessage(`${doc.name} was removed from ${roomName}.`);
     } catch (err) {
@@ -223,7 +223,6 @@ export default function ClassroomPage({
 
       {message && <p className="sx-note">{message}</p>}
 
-      {/* Documents section — always visible, no tab switching */}
       <section className="sx-card">
         <div className="cr-bar">
           <strong>
@@ -286,7 +285,7 @@ export default function ClassroomPage({
 
               <tbody>
                 {docs.map((doc) => (
-                  <tr key={doc.name}>
+                  <tr key={doc.id}>
                     <td>
                       <div className="kb-name">
                         <span className="hm-file-icon">
@@ -374,17 +373,17 @@ export default function ClassroomPage({
                 </div>
               ) : (
                 available.map((source) => {
-                  const already = inClassroom.has(source.name);
+                  const already = inClassroom.has(source.id);
                   return (
                     <label
-                      key={source.name}
+                      key={source.id}
                       className={`cr-item ${already ? "disabled" : ""}`}
                     >
                       <input
                         type="checkbox"
-                        checked={already || picked.includes(source.name)}
+                        checked={already || picked.includes(source.id)}
                         disabled={already || busy}
-                        onChange={() => togglePick(source.name)}
+                        onChange={() => togglePick(source.id)}
                       />
                       <span className="hm-file-icon">
                         {TYPE_ICON[source.type]}

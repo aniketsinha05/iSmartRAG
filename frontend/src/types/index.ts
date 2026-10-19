@@ -7,6 +7,7 @@ export type Page =
   | "Classroom";
 
 export type Source = {
+  id: number;
   name: string;
   type: "PDF" | "DOCX" | "PPT" | "EXCEL" | "WEB";
   size: string;
@@ -54,7 +55,7 @@ export type QuizQuestion = {
 
 export type QuizSettings = {
   classroomId: number;
-  documentNames: string[];
+  documentIds: number[];
   numQuestions: 5 | 10;
   difficulty: QuizDifficulty;
   includeTrueFalse: boolean;
@@ -62,7 +63,7 @@ export type QuizSettings = {
 
 export type QuizAttemptSummary = {
   id: string;
-  classroomId: number;
+  classroomId: number | null;
   classroomName: string;
   createdAt: string;
   numQuestions: number;

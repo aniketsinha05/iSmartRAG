@@ -32,12 +32,10 @@ function classroomIdFromHash(): number | null {
   return id !== null && id >= 1 ? id : null;
 }
 
-
-
 function pageFromHash(): Page {
   const hash = window.location.hash;
 
-  // /classroom/:id/chat → Chat page (classroom will be pre-selected)
+  // /classroom/:id/chat → Chat page
   if (/^#\/classroom\/\d+\/chat/.test(hash)) return "Chat";
 
   // /chat or /chat/cr/...
@@ -60,7 +58,6 @@ function App() {
     classroomIdFromHash
   );
 
-
   const setPage = useCallback((next: Page) => {
     // Arriving at Chatbot from another page should open a new chat
     if (next === "Chat" && pageFromHash() !== "Chat") {
@@ -76,7 +73,6 @@ function App() {
     const onHashChange = () => {
       setPageState(pageFromHash());
       setClassroomId(classroomIdFromHash());
-
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -85,7 +81,6 @@ function App() {
   const [collapsed, setCollapsed] = useState(() => window.innerWidth <= 900);
   const [sources, setSources] = useState<Source[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
-  
 
   const refreshSources = useCallback(async () => {
     try {
@@ -110,7 +105,7 @@ function App() {
         <DashboardPage
           setPage={setPage}
           sources={sources}
-          setSources={setSources}
+          refreshSources={refreshSources}
           questionCount={questionCount}
           setQuestionCount={setQuestionCount}
         />
@@ -124,19 +119,9 @@ function App() {
         />
       )}
 
-      {page === "Chat" && (
-        <Chat setQuestionCount={setQuestionCount} />
-      )}
+      {page === "Chat" && <Chat setQuestionCount={setQuestionCount} />}
 
-      
-
-
-
-          {page === "Quiz" && <Quiz sourceCount={sources.length} />}
-
-
-
-
+      {page === "Quiz" && <Quiz sourceCount={sources.length} />}
 
       {page === "Settings" && <Settings sourceCount={sources.length} />}
 

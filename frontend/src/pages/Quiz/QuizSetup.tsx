@@ -16,7 +16,7 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
   const [classroomId, setClassroomId] = useState<number | null>(null);
   const [docs, setDocs] = useState<Source[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
   const [difficulty, setDifficulty] = useState<QuizDifficulty>("medium");
   const [includeTrueFalse, setIncludeTrueFalse] = useState(false);
@@ -45,9 +45,9 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
     };
   }, [activeId]);
 
-  const toggleDoc = (name: string) =>
+  const toggleDoc = (id: number) =>
     setSelected((cur) =>
-      cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name]
+      cur.includes(id) ? cur.filter((n) => n !== id) : [...cur, id]
     );
 
   const canGenerate =
@@ -57,7 +57,7 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
     if (activeId === null) return;
     onGenerate({
       classroomId: activeId,
-      documentNames: selected,
+      documentIds: selected,
       numQuestions,
       difficulty,
       includeTrueFalse,
@@ -75,7 +75,9 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
       </div>
 
       {classrooms.length === 0 ? (
-        <div className="hm-empty">No classrooms found. Is the backend running?</div>
+        <div className="hm-empty">
+          No classrooms yet. Create one on the Classroom page first.
+        </div>
       ) : (
         <>
           <div className="qz-field">
@@ -121,12 +123,12 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
             ) : (
               <div className="qz-docs">
                 {docs.map((d) => (
-                  <label key={d.name} className="qz-doc">
+                  <label key={d.id} className="qz-doc">
                     <input
                       type="checkbox"
-                      checked={selected.includes(d.name)}
+                      checked={selected.includes(d.id)}
                       disabled={busy}
-                      onChange={() => toggleDoc(d.name)}
+                      onChange={() => toggleDoc(d.id)}
                     />
                     <span>{d.name}</span>
                   </label>

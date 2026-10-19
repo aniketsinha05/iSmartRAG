@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class QuizRequest(BaseModel):
-    document_names: list[str] = []
+    document_ids: list[int] = []
     num_questions: Literal[5, 10] = 5
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     include_true_false: bool = False
@@ -109,7 +109,7 @@ def generate_questions(call_llm, chunks, body):
 
 class QuizAttemptRequest(BaseModel):
     classroom_id: int
-    document_names: list[str] = []
+    document_ids: list[int] = []
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     include_true_false: bool = False
     questions: list[dict]

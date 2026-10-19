@@ -1,4 +1,8 @@
-from pathlib import Path
+"""
+classrooms.py
+Classrooms in PostgreSQL. Everything is scoped to one user, and documents are
+identified by their knowledge_base.id (never by file name).
+"""
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -114,104 +118,78 @@ def rename_classroom(db, user_id, classroom_id, name):
 
 
 def delete_classroom(db, user_id, classroom_id):
+    """Call chats.delete_classroom_chats() BEFORE this: chats.classroom_id is
+    ON DELETE SET NULL, so otherwise the chats would turn into general chats."""
     room = _get(db, user_id, classroom_id)
     if not room:
         return False
-    # classroom_documents rows cascade; chats/quiz_attempts.classroom_id -> NULL
-    db.delete(room)
+    db.delete(room)  # classroom_documents rows cascade
     db.commit()
     return True
 
 
-def get_sources(db, user_id, classroom_id):
+def get_document_ids(db, user_id, classroom_id) -> list[int]:
     room = _get(db, user_id, classroom_id)
     if not room:
         return []
-    rows = db.scalars(
-        select(KnowledgeBase.name)
-        .join(ClassroomDocument, ClassroomDocument.document_id == KnowledgeBase.id)
-        .where(
-            ClassroomDocument.classroom_id == room.id,
-            KnowledgeBase.user_id == user_id,
-        )
-        .order_by(ClassroomDocument.added_at, KnowledgeBase.id)
-    ).all()
-    return list(rows)
-
-
-def _get_or_create_doc(db: Session, user_id: int, name: str) -> KnowledgeBase:
-    doc = db.scalar(
-        select(KnowledgeBase).where(
-            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
-        )
+    return list(
+        db.scalars(
+            select(ClassroomDocument.document_id)
+            .join(KnowledgeBase, KnowledgeBase.id == ClassroomDocument.document_id)
+            .where(
+                ClassroomDocument.classroom_id == room.id,
+                KnowledgeBase.user_id == user_id,
+            )
+            .order_by(ClassroomDocument.added_at, ClassroomDocument.document_id)
+        ).all()
     )
-    if doc is None:
-        # Placeholder until document records move to the DB (later step).
-        doc = KnowledgeBase(
-            user_id=user_id,
-            name=name,
-            type=Path(name).suffix.lower().lstrip(".") or "unknown",
-        )
-        db.add(doc)
-        db.flush()
-    return doc
 
 
-def add_sources(db, user_id, classroom_id, names):
-    added, skipped = [], []
+def add_documents(db, user_id, classroom_id, document_ids):
+    """Link documents (by id) to a classroom. Ids that are not this user's
+    documents are skipped, never linked. Returns (added_ids, skipped_ids)."""
     room = _get(db, user_id, classroom_id)
     if not room:
-        return added, list(names)
+        return [], list(document_ids)
 
-    for name in names:
-        doc = _get_or_create_doc(db, user_id, name)
-        exists = db.scalar(
-            select(ClassroomDocument).where(
-                ClassroomDocument.classroom_id == room.id,
-                ClassroomDocument.document_id == doc.id,
+    ids = list(dict.fromkeys(document_ids))
+    owned = set(
+        db.scalars(
+            select(KnowledgeBase.id).where(
+                KnowledgeBase.user_id == user_id, KnowledgeBase.id.in_(ids)
             )
-        )
-        if exists:
-            skipped.append(name)
+        ).all()
+    )
+    existing = set(
+        db.scalars(
+            select(ClassroomDocument.document_id).where(
+                ClassroomDocument.classroom_id == room.id
+            )
+        ).all()
+    )
+
+    added, skipped = [], []
+    for doc_id in ids:
+        if doc_id in owned and doc_id not in existing:
+            db.add(ClassroomDocument(classroom_id=room.id, document_id=doc_id))
+            added.append(doc_id)
         else:
-            db.add(ClassroomDocument(classroom_id=room.id, document_id=doc.id))
-            added.append(name)
+            skipped.append(doc_id)
 
     db.commit()
     return added, skipped
 
 
-def remove_source(db, user_id, classroom_id, name):
+def remove_document(db, user_id, classroom_id, document_id):
+    """Unlink only. The document stays in the Knowledge Base."""
     room = _get(db, user_id, classroom_id)
     if not room:
-        return False
-    doc = db.scalar(
-        select(KnowledgeBase).where(
-            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
-        )
-    )
-    if not doc:
         return False
     result = db.execute(
         delete(ClassroomDocument).where(
             ClassroomDocument.classroom_id == room.id,
-            ClassroomDocument.document_id == doc.id,
+            ClassroomDocument.document_id == document_id,
         )
     )
     db.commit()
     return result.rowcount > 0
-
-
-def remove_source_everywhere(db, user_id, name):
-    doc = db.scalar(
-        select(KnowledgeBase).where(
-            KnowledgeBase.user_id == user_id, KnowledgeBase.name == name
-        )
-    )
-    if not doc:
-        return 0
-    result = db.execute(
-        delete(ClassroomDocument).where(ClassroomDocument.document_id == doc.id)
-    )
-    db.commit()
-    return result.rowcount

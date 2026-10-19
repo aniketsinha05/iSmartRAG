@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Page, Source } from "../../types";
-import {
-  deleteSourceByName,
-  fetchSourceContent,
-} from "../../services/sourcesService";
+import { deleteSource, fetchSourceContent } from "../../services/sourcesService";
 
 type KnowledgeBaseProps = {
   sources: Source[];
@@ -60,7 +57,7 @@ export default function KnowledgeBase({
   const [sortDesc, setSortDesc] = useState(true);
   const [pageNo, setPageNo] = useState(1);
 
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("overview");
   const [content, setContent] = useState<string[] | null>(null);
   const [contentError, setContentError] = useState("");
@@ -73,14 +70,14 @@ export default function KnowledgeBase({
   }, [refreshSources]);
 
   useEffect(() => {
-    if (!selectedName || panelTab !== "content") return;
+    if (selectedId === null || panelTab !== "content") return;
 
     let cancelled = false;
 
     setContent(null);
     setContentError("");
 
-    fetchSourceContent(selectedName)
+    fetchSourceContent(selectedId)
       .then((chunks) => {
         if (!cancelled) setContent(chunks);
       })
@@ -91,7 +88,7 @@ export default function KnowledgeBase({
     return () => {
       cancelled = true;
     };
-  }, [selectedName, panelTab]);
+  }, [selectedId, panelTab]);
 
   const websites = sources.filter((s) => s.type === "WEB");
   const documentCount = sources.length - websites.length;
@@ -136,10 +133,10 @@ export default function KnowledgeBase({
     currentPage * PAGE_SIZE
   );
 
-  const selected = sources.find((s) => s.name === selectedName);
+  const selected = sources.find((s) => s.id === selectedId);
 
   const openSource = (source: Source) => {
-    setSelectedName(source.name);
+    setSelectedId(source.id);
     setPanelTab("overview");
     setContent(null);
     setContentError("");
@@ -147,7 +144,7 @@ export default function KnowledgeBase({
 
   const removeSource = async (source: Source) => {
     const ok = window.confirm(
-      `Remove "${source.name}" from the knowledge base?`
+      `Remove "${source.name}" from the knowledge base? It will also be removed from every classroom.`
     );
 
     if (!ok) return;
@@ -156,8 +153,8 @@ export default function KnowledgeBase({
     setMessage("");
 
     try {
-      await deleteSourceByName(source.name);
-      setSelectedName(null);
+      await deleteSource(source.id);
+      setSelectedId(null);
       await refreshSources();
       setMessage(`${source.name} was removed.`);
     } catch (error) {
@@ -327,9 +324,9 @@ export default function KnowledgeBase({
                 <tbody>
                   {rows.map((source) => (
                     <tr
-                      key={source.name}
+                      key={source.id}
                       className={`kb-row ${
-                        selectedName === source.name ? "active" : ""
+                        selectedId === source.id ? "active" : ""
                       }`}
                       onClick={() => openSource(source)}
                     >
@@ -428,7 +425,7 @@ export default function KnowledgeBase({
                 type="button"
                 className="hm-x"
                 aria-label="Close details"
-                onClick={() => setSelectedName(null)}
+                onClick={() => setSelectedId(null)}
               >
                 ✕
               </button>
