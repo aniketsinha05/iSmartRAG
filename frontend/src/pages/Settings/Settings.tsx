@@ -106,11 +106,13 @@
   }: {
     sourceCount?: number;
   }) {
-    const [theme, setTheme] = useEffect(() => {
+    const [theme, setTheme] = useState<ThemeChoice>(loadTheme);   // keep YOUR original right-hand side here
+    useEffect(() => {
       const sync = () => setTheme(loadTheme());
       window.addEventListener("viora:theme", sync);
       return () => window.removeEventListener("viora:theme", sync);
     }, []);
+    
     const [tab, setTab] = useState<TabKey>("general");
     const [backend, setBackend] = useState<BackendState>("checking");
 
