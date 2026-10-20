@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Classroom, ChatSummary, Message, Source } from "../../types";
 import { fetchSources } from "../../services/sourcesService";
+import { apiClient } from "../../services/apiClient";
 
 import {
   fetchClassrooms,
@@ -10,6 +11,8 @@ import {
   fetchGeneralChat,
   deleteGeneralChat,
 } from "../../services/classroomService";
+
+import Icon from "../../components/common/Icon";
 
 const SUGGESTIONS = [
   { title: "Summarize my sources",  text: "Summarize the main points across my sources." },
@@ -24,12 +27,13 @@ const NEW_CHAT = "__new__"; // saved when a blank chat is open
 
 const SCOPE_KEY = "mybookai-chat-scope";
 
+// Classroom ids are real database ids now (no fixed 1-5), so accept any positive id.
 const readScope = (): number[] => {
   try {
     return (localStorage.getItem(SCOPE_KEY) ?? "")
       .split(",")
       .map(Number)
-      .filter((n) => n >= 1 && n <= 5);
+      .filter((n) => Number.isInteger(n) && n >= 1);
   } catch {
     return [];
   }
@@ -66,35 +70,40 @@ export default function Chat({
   // ── persistence ──────────────────────────────────────────────────────────
   const [chatId, setChatId]     = useState<string | null>(null);
   const [chatList, setChatList] = useState<ChatSummary[]>([]);
-  const [ready, setReady]       = useState(false);   // true once initial load done
+  const [ready, setReady]       = useState(false);
 
   // ── classroom picker ─────────────────────────────────────────────────────
   const [classroomIds, setClassroomIds]               = useState<number[]>(readScope);
   const [availableClassrooms, setAvailableClassrooms] = useState<Classroom[]>([]);
   const [showPicker, setShowPicker]                   = useState(false);
 
-  // ── Knowledge Base document picker ──
-const [availableSources, setAvailableSources] = useState<Source[]>([]);
-const [selectedSources, setSelectedSources] = useState<string[]>([]);
-const [sourceSearch, setSourceSearch] = useState("");
+  // ── Knowledge Base document picker (by document id) ──────────────────────
+  const [availableSources, setAvailableSources] = useState<Source[]>([]);
+  const [selectedDocIds, setSelectedDocIds]     = useState<number[]>([]);
+  const [sourceSearch, setSourceSearch]         = useState("");
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLTextAreaElement>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const bottomRef   = useRef<HTMLDivElement>(null);
+  const inputRef    = useRef<HTMLTextAreaElement>(null);
+  const pickerRef   = useRef<HTMLDivElement>(null);
+  const scopeBtnRef = useRef<HTMLButtonElement>(null);
 
   // ── scroll to bottom ─────────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // ── load classroom list once ──────────────────────────────────────────────
+  // ── load classrooms + documents once ─────────────────────────────────────
   useEffect(() => {
-    fetchClassrooms().then(setAvailableClassrooms).catch(console.error);
-  }, []);
+    fetchClassrooms()
+      .then((rooms) => {
+        setAvailableClassrooms(rooms);
+        // drop saved scope ids that no longer exist (deleted classroom / other account)
+        setClassroomIds((curr) => curr.filter((id) => rooms.some((r) => r.id === id)));
+      })
+      .catch(console.error);
 
-  useEffect(() => {
-  fetchSources().then(setAvailableSources).catch(console.error);
-}, []);
+    fetchSources().then(setAvailableSources).catch(console.error);
+  }, []);
 
   // ── load persisted chats on mount ────────────────────────────────────────
   useEffect(() => {
@@ -106,7 +115,6 @@ const [sourceSearch, setSourceSearch] = useState("");
         if (cancelled) return;
         setChatList(list);
 
-        // auto-load the most recent chat
         // Arriving from another page: open a new chat instead of restoring one
         let fresh = false;
         try {
@@ -119,7 +127,6 @@ const [sourceSearch, setSourceSearch] = useState("");
           return;
         }
 
-        // Coming from "Chat with <classroom>" should start fresh
         if (list.length === 0) return;
 
         const saved = readActiveChat();
@@ -141,9 +148,7 @@ const [sourceSearch, setSourceSearch] = useState("");
     return () => { cancelled = true; };
   }, []);
 
-  // ── when navigating here from a classroom, reset scope (keep history) ────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-    // keep the selected classrooms across refresh
+  // keep the selected classrooms across refresh
   useEffect(() => {
     try {
       if (classroomIds.length > 0) {
@@ -154,12 +159,14 @@ const [sourceSearch, setSourceSearch] = useState("");
     } catch {}
   }, [classroomIds]);
 
-  // ── close picker on outside click ────────────────────────────────────────
+  // ── close picker on outside click (the + button handles its own toggle) ──
   useEffect(() => {
     if (!showPicker) return;
     const handler = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node))
-        setShowPicker(false);
+      const target = e.target as Node;
+      if (pickerRef.current?.contains(target)) return;
+      if (scopeBtnRef.current?.contains(target)) return;
+      setShowPicker(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -206,21 +213,20 @@ const [sourceSearch, setSourceSearch] = useState("");
         writeActiveChat(activeChatId);
       }
 
-      const response = await fetch("http://localhost:8000/chat/ask", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    question,
-    classroom_ids: classroomIds,
-    sources: selectedSources,
-    n_results: 5,
-    chat_id: activeChatId,
-  }),
-});
+      // apiClient adds the Authorization header
+      const response = await apiClient("/chat/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          classroom_ids: classroomIds,
+          document_ids: selectedDocIds,
+          n_results: 5,
+          chat_id: activeChatId,
+        }),
+      });
 
-if (!response.ok) throw new Error("Failed to get an answer.");
-
-const data = await response.json();
+      const data = await response.json();
 
       setMessages((curr) => [
         ...curr,
@@ -230,7 +236,6 @@ const data = await response.json();
         },
       ]);
 
-      // Refresh sidebar so the new chat / updated title appears
       await refreshChatList();
     } catch (err) {
       console.error(err);
@@ -238,7 +243,7 @@ const data = await response.json();
         ...curr,
         {
           role: "ai",
-          text: "I couldn't reach the backend. Check that it's running, then try again.",
+          text: "I couldn't get an answer. Check that the backend is running, then try again.",
         },
       ]);
     } finally {
@@ -282,27 +287,20 @@ const data = await response.json();
     if (inputRef.current) inputRef.current.style.height = "auto";
   };
 
-  // ── classroom picker helpers ──────────────────────────────────────────────
+  // ── picker helpers ────────────────────────────────────────────────────────
   const toggleClassroom = (id: number) =>
     setClassroomIds((curr) =>
       curr.includes(id) ? curr.filter((c) => c !== id) : [...curr, id]
     );
 
+  const toggleDoc = (id: number) =>
+    setSelectedDocIds((curr) =>
+      curr.includes(id) ? curr.filter((d) => d !== id) : [...curr, id]
+    );
 
-
-
-const toggleSource = (name: string) =>
-  setSelectedSources((curr) =>
-    curr.includes(name)
-      ? curr.filter((source) => source !== name)
-      : [...curr, name]
+  const filteredSources = availableSources.filter((source) =>
+    source.name.toLowerCase().includes(sourceSearch.toLowerCase())
   );
-
-const filteredSources = availableSources.filter((source) =>
-  source.name.toLowerCase().includes(sourceSearch.toLowerCase())
-);
-
-    
 
   const copy = async (text: string, index: number) => {
     try {
@@ -313,10 +311,16 @@ const filteredSources = availableSources.filter((source) =>
   };
 
   const selectedRooms = availableClassrooms.filter((r) => classroomIds.includes(r.id));
-  const scopeLabel =
-    selectedRooms.length === 0
-      ? "all your documents"
-      : selectedRooms.map((r) => r.name).join(" + ");
+  const selectedDocs  = availableSources.filter((s) => selectedDocIds.includes(s.id));
+  const hasScope = selectedRooms.length > 0 || selectedDocs.length > 0;
+
+  const scopeParts = [
+    ...selectedRooms.map((r) => r.name),
+    ...(selectedDocs.length > 0
+      ? [`${selectedDocs.length} document${selectedDocs.length === 1 ? "" : "s"}`]
+      : []),
+  ];
+  const scopeLabel = hasScope ? scopeParts.join(" + ") : "all your documents";
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
@@ -371,10 +375,10 @@ const filteredSources = availableSources.filter((source) =>
         <div className="ct-scroll">
           {messages.length === 0 ? (
             <div className="ct-welcome">
-              <div className="ct-logo">iS</div>
+              <div className="ct-logo"><Icon name="sparkle" size={26} /></div>
               <h2>How can I help you today?</h2>
               <p>
-                {classroomIds.length > 0
+                {hasScope
                   ? `Searching in ${scopeLabel}.`
                   : "Ask a question and I'll answer from all documents in your knowledge base."}
               </p>
@@ -402,7 +406,7 @@ const filteredSources = availableSources.filter((source) =>
                   </div>
                 ) : (
                   <div className="ct-row" key={index}>
-                    <div className="ct-avatar">iS</div>
+                    <div className="ct-avatar"><Icon name="sparkle" size={16} /></div>
                     <div className="ct-ai">
                       <div className="ct-text">{message.text}</div>
                       <div className="ct-tools">
@@ -427,7 +431,7 @@ const filteredSources = availableSources.filter((source) =>
 
               {loading && (
                 <div className="ct-row">
-                  <div className="ct-avatar">iS</div>
+                  <div className="ct-avatar"><Icon name="sparkle" size={16} /></div>
                   <div className="ct-dots" aria-label="Searching">
                     <i /><i /><i />
                   </div>
@@ -442,12 +446,12 @@ const filteredSources = availableSources.filter((source) =>
         {/* ── Composer area ─────────────────────────────────────────────── */}
         <div className="ct-composer-wrap">
 
-          {/* Classroom badges */}
-          {selectedRooms.length > 0 && (
+          {/* Scope badges */}
+          {hasScope && (
             <div className="ct-badges">
               {selectedRooms.map((r) => (
-                <span key={r.id} className="ct-badge">
-                  🏫 {r.name}
+                <span key={`room-${r.id}`} className="ct-badge">
+                  {r.name}
                   <button
                     type="button"
                     onClick={() => toggleClassroom(r.id)}
@@ -457,10 +461,23 @@ const filteredSources = availableSources.filter((source) =>
                   </button>
                 </span>
               ))}
+
+              {selectedDocs.map((d) => (
+                <span key={`doc-${d.id}`} className="ct-badge">
+                  {d.name.length > 28 ? d.name.slice(0, 25) + "…" : d.name}
+                  <button
+                    type="button"
+                    onClick={() => toggleDoc(d.id)}
+                    aria-label={`Remove ${d.name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
           )}
 
-          {/* Classroom picker dropdown */}
+          {/* Picker dropdown */}
           {showPicker && (
             <div className="ct-picker" ref={pickerRef}>
               <div className="ct-picker-head">
@@ -470,6 +487,10 @@ const filteredSources = availableSources.filter((source) =>
                 </button>
               </div>
 
+              {availableClassrooms.length === 0 && (
+                <div className="hm-empty">No classrooms yet.</div>
+              )}
+
               {availableClassrooms.map((r) => (
                 <label key={r.id} className="ct-picker-item">
                   <input
@@ -477,7 +498,7 @@ const filteredSources = availableSources.filter((source) =>
                     checked={classroomIds.includes(r.id)}
                     onChange={() => toggleClassroom(r.id)}
                   />
-                  <span>🏫</span>
+                  <Icon name="classroom" size={16} />
                   <span style={{ flex: 1 }}>{r.name}</span>
                   <span className="sx-hint">
                     {r.documentCount} doc{r.documentCount !== 1 ? "s" : ""}
@@ -485,41 +506,61 @@ const filteredSources = availableSources.filter((source) =>
                 </label>
               ))}
 
-{/* Knowledge Base documents */}
-<div className="ct-picker-head">
-  <span>Knowledge Base Documents</span>
-  <button
-    type="button"
-    className="ct-picker-clear"
-    onClick={() => setSelectedSources([])}
-  >
-    Clear
-  </button>
-</div>
-
-<input
-  className="sx-select"
-  placeholder="Search documents..."
-  value={sourceSearch}
-  onChange={(e) => setSourceSearch(e.target.value)}
-/>
-
-{filteredSources.map((source) => (
-  <label key={source.name} className="ct-picker-item">
-    <input
-      type="checkbox"
-      checked={selectedSources.includes(source.name)}
-      onChange={() => toggleSource(source.name)}
-    />
-    <span>📄</span>
-    <span style={{ flex: 1 }}>{source.name}</span>
-  </label>
-))}
-              {classroomIds.length > 0 && (
+              {/* Knowledge Base documents */}
+              <div className="ct-picker-head">
+                <span>Knowledge Base Documents</span>
                 <button
                   type="button"
                   className="ct-picker-clear"
-                  onClick={() => { setClassroomIds([]); setShowPicker(false); }}
+                  style={{ width: "auto", borderTop: 0, padding: "0 4px" }}
+                  onClick={() => setSelectedDocIds([])}
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div style={{ padding: "0 16px 8px" }}>
+                <input
+                  className="sx-input full"
+                  placeholder="Search documents..."
+                  value={sourceSearch}
+                  onChange={(e) => setSourceSearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ maxHeight: 220, overflowY: "auto" }}>
+                {filteredSources.length === 0 && (
+                  <div className="hm-empty">
+                    {availableSources.length === 0
+                      ? "No documents yet. Upload one first."
+                      : "No documents match."}
+                  </div>
+                )}
+
+                {filteredSources.map((source) => (
+                  <label key={source.id} className="ct-picker-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedDocIds.includes(source.id)}
+                      onChange={() => toggleDoc(source.id)}
+                    />
+                    <Icon name="file" size={16} />
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {source.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {hasScope && (
+                <button
+                  type="button"
+                  className="ct-picker-clear"
+                  onClick={() => {
+                    setClassroomIds([]);
+                    setSelectedDocIds([]);
+                    setShowPicker(false);
+                  }}
                 >
                   ✕ Clear — search all documents
                 </button>
@@ -530,14 +571,15 @@ const filteredSources = availableSources.filter((source) =>
           {/* Composer */}
           <div className="ct-composer">
             <button
+              ref={scopeBtnRef}
               type="button"
-              className={`ct-scope-btn ${classroomIds.length > 0 ? "active" : ""}`}
+              className={`ct-scope-btn ${hasScope ? "active" : ""}`}
               onClick={() => setShowPicker((v) => !v)}
-              aria-label="Filter by classroom"
+              aria-label="Filter by classroom or document"
               title={
-                classroomIds.length > 0
+                hasScope
                   ? `Searching in ${scopeLabel}`
-                  : "Search all documents — click to filter by classroom"
+                  : "Search all documents — click to filter by classroom or document"
               }
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -551,7 +593,7 @@ const filteredSources = availableSources.filter((source) =>
               rows={1}
               value={input}
               placeholder={
-                classroomIds.length > 0
+                hasScope
                   ? `Ask anything in ${scopeLabel}…`
                   : "Ask anything about your knowledge base…"
               }
@@ -580,7 +622,7 @@ const filteredSources = availableSources.filter((source) =>
           </div>
 
           <p className="ct-note">
-            {classroomIds.length > 0
+            {hasScope
               ? `Searching ${scopeLabel} — shared documents are used once. `
               : "Searching all your indexed sources. "}
             Enter to send · Shift+Enter for a new line.

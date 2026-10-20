@@ -19,7 +19,7 @@ type ApiQuestion = {
 
 type ApiSummary = {
   id: string;
-  classroom_id: number;
+  classroom_id: number | null;
   classroom_name: string;
   created_at: string;
   num_questions: number;
@@ -84,7 +84,7 @@ export async function generateQuiz(s: QuizSettings): Promise<QuizQuestion[]> {
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify({
-      document_names: s.documentNames,
+      document_ids: s.documentIds,
       num_questions: s.numQuestions,
       difficulty: s.difficulty,
       include_true_false: s.includeTrueFalse,
@@ -104,7 +104,7 @@ export async function saveQuizAttempt(
     headers: JSON_HEADERS,
     body: JSON.stringify({
       classroom_id: s.classroomId,
-      document_names: s.documentNames,
+      document_ids: s.documentIds,
       difficulty: s.difficulty,
       include_true_false: s.includeTrueFalse,
       questions: questions.map(toApiQuestion),

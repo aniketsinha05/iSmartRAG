@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Page } from "../../types";
 import { API_BASE_URL } from "../../config/env";
+import { apiClient } from "../../services/apiClient";
+import { logout } from "../../services/authService";
+import { applyTheme, loadTheme, saveTheme } from "../../services/theme";
+import type { ThemeChoice } from "../../services/theme";
+import Icon from "../common/Icon";
+import type { IconName } from "../common/Icon";
 
 const TITLES: Record<Page, string> = {
   Dashboard: "Home",
@@ -11,6 +17,12 @@ const TITLES: Record<Page, string> = {
   Settings: "Settings",
 };
 
+const THEMES: { value: ThemeChoice; label: string; icon: IconName }[] = [
+  { value: "light", label: "Light", icon: "sun" },
+  { value: "dark", label: "Dark", icon: "moon" },
+  { value: "system", label: "Auto", icon: "monitor" },
+];
+
 export default function Topbar({
   page,
   onMenu,
@@ -19,10 +31,43 @@ export default function Topbar({
   onMenu: () => void;
 }) {
   const [online, setOnline] = useState<boolean | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState({ name: "", email: "" });
+  const [theme, setTheme] = useState<ThemeChoice>(loadTheme);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    apiClient("/auth/me")
+      .then((r) => r.json())
+      .then((u) => setUser({ name: u.name ?? "", email: u.email ?? "" }))
+      .catch(() => {});
+  }, []);
+
+  // keep in sync if the theme is changed on the Settings page
+  useEffect(() => {
+    const sync = () => setTheme(loadTheme());
+    window.addEventListener("viora:theme", sync);
+    return () => window.removeEventListener("viora:theme", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     let cancelled = false;
-
     const check = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/health`);
@@ -31,20 +76,26 @@ export default function Topbar({
         if (!cancelled) setOnline(false);
       }
     };
-
     check();
     const timer = window.setInterval(check, 30000);
-
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
   }, []);
 
+  const chooseTheme = (choice: ThemeChoice) => {
+    setTheme(choice);
+    saveTheme(choice);
+    applyTheme(choice);
+  };
+
+  const initial = (user.name.trim().charAt(0) || "U").toUpperCase();
+
   return (
     <header className="topbar">
       <button className="mobile-menu" onClick={onMenu} aria-label="Toggle sidebar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <Icon name="menu" size={20} />
       </button>
 
       <div className="topbar-title">
@@ -53,10 +104,7 @@ export default function Topbar({
         {page === "Chat" && (
           <span className="tt-wrap">
             <button type="button" className="tt-btn" aria-label="How the chatbot finds answers">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 11v5M12 8h.01" />
-              </svg>
+              <Icon name="info" size={16} />
             </button>
 
             <div className="tt-pop" role="tooltip">
@@ -80,9 +128,7 @@ export default function Topbar({
                   It answers only from your documents. If the answer isn't
                   there, it says so.
                 </li>
-                <li>
-                  Chats are saved in the Recent list, whatever the scope.
-                </li>
+                <li>Chats are saved in the Recent list, whatever the scope.</li>
               </ul>
             </div>
           </span>
@@ -90,33 +136,99 @@ export default function Topbar({
       </div>
 
       <div className="topbar-right">
-        <span
-          className={`system-pill ${online === null ? "" : online ? "ok" : "bad"}`}
-        >
+        <span className={`system-pill ${online === null ? "" : online ? "ok" : "bad"}`}>
           <i></i>
-          {online === null
-            ? "Checking..."
-            : online
-            ? "System Online"
-            : "System Offline"}
+          {online === null ? "Checking..." : online ? "System Online" : "System Offline"}
         </span>
 
         <button className="topbar-bell" aria-label="Notifications">
-          &#128276;
+          <Icon name="bell" size={19} />
         </button>
 
-        <button
-          type="button"
-          className="topbar-user"
-          onClick={() => {
-            window.location.hash = "/settings";
-          }}
-          aria-label="Open settings"
-          title="Settings"
-        >
-          <span className="topbar-avatar">U</span>
-          <span className="topbar-name">User</span>
-        </button>
+        <div className="user-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="topbar-user"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            <span className="topbar-avatar">{initial}</span>
+            <span className="topbar-name">{user.name || "User"}</span>
+            <Icon name="chevron" size={16} className={`topbar-caret ${menuOpen ? "open" : ""}`} />
+          </button>
+
+          {menuOpen && (
+            <div className="ud" role="menu">
+              <div className="ud-head">
+                <span className="ud-avatar">{initial}</span>
+                <div>
+                  <strong>{user.name || "User"}</strong>
+                  <small>{user.email}</small>
+                </div>
+              </div>
+
+              <div className="ud-sep" />
+
+              <button
+                type="button"
+                role="menuitem"
+                className="ud-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.location.hash = "/settings";
+                }}
+              >
+                <Icon name="user" size={17} />
+                Account settings
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                className="ud-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.location.hash = "/knowledge-base";
+                }}
+              >
+                <Icon name="database" size={17} />
+                Knowledge Base
+              </button>
+
+              <div className="ud-label">Appearance</div>
+              <div className="ud-theme" role="group" aria-label="Theme">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    className={theme === t.value ? "active" : ""}
+                    onClick={() => chooseTheme(t.value)}
+                  >
+                    <Icon name={t.icon} size={15} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ud-sep" />
+
+              <button
+                type="button"
+                role="menuitem"
+                className="ud-item danger"
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout();
+                  window.dispatchEvent(new Event("auth:logout"));
+                }}
+              >
+                <Icon name="logout" size={17} />
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

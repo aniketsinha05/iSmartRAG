@@ -5,11 +5,15 @@ import { uploadFile } from "../../services/uploadService";
 import { addWebsite } from "../../services/websiteService";
 import { searchDocuments } from "../../services/searchService";
 import { askQuestion } from "../../services/askService";
+import { ApiError } from "../../services/apiClient";
+
+import Icon from "../../components/common/Icon";
+import FileBadge from "../../components/common/FileBadge";
 
 type DashboardProps = {
   setPage: (page: Page) => void;
   sources: Source[];
-  setSources: Dispatch<SetStateAction<Source[]>>;
+  refreshSources: () => Promise<void>;
   questionCount: number;
   setQuestionCount: Dispatch<SetStateAction<number>>;
 };
@@ -22,39 +26,6 @@ const EXAMPLES = [
   "Compare information from different sources",
 ];
 
-const TYPE_ICON: Record<Source["type"], string> = {
-  PDF: "📕",
-  DOCX: "📘",
-  PPT: "📙",
-  EXCEL: "📗",
-  WEB: "🌐",
-};
-
-function sourceTypeFromName(name: string): Source["type"] {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-
-  if (ext === "docx" || ext === "doc") return "DOCX";
-  if (ext === "ppt" || ext === "pptx") return "PPT";
-
-  if (["xlsx", "xls", "xlsm", "xltx", "csv"].includes(ext)) {
-    return "EXCEL";
-  }
-
-  return "PDF";
-}
-
-function resultIcon(type: string | null): string {
-  const t = (type ?? "").toLowerCase();
-
-  if (t === "pdf") return "📕";
-  if (t === "word" || t === "docx") return "📘";
-  if (t === "ppt") return "📙";
-  if (t === "excel") return "📗";
-  if (t === "website" || t === "web") return "🌐";
-
-  return "📄";
-}
-
 function matchPercent(distance: number | null): number {
   if (distance === null) return 0;
 
@@ -64,7 +35,7 @@ function matchPercent(distance: number | null): number {
 export default function Dashboard({
   setPage,
   sources,
-  setSources,
+  refreshSources,
   questionCount,
   setQuestionCount,
 }: DashboardProps) {
@@ -86,13 +57,6 @@ export default function Dashboard({
   const addRef = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const rememberSource = (source: Source) => {
-    setSources((current) => [
-      ...current.filter((item) => item.name !== source.name),
-      source,
-    ]);
-  };
-
   const handleFile = async (file: File | undefined) => {
     if (!file || busy) return;
 
@@ -102,17 +66,17 @@ export default function Dashboard({
     try {
       const data = await uploadFile(file);
 
-      rememberSource({
-        name: file.name,
-        type: sourceTypeFromName(file.name),
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        chunks: data.chunks,
-      });
+      // reload from the server so the new source has its real id
+      await refreshSources();
 
       setAddStatus(`${file.name} added (${data.chunks} chunks).`);
     } catch (error) {
       console.error(error);
-      setAddStatus("Upload failed. Please try again.");
+      setAddStatus(
+        error instanceof ApiError && error.detail
+          ? error.detail
+          : "Upload failed. Please try again."
+      );
     } finally {
       setBusy(false);
     }
@@ -129,18 +93,17 @@ export default function Dashboard({
     try {
       const data = await addWebsite(clean);
 
-      rememberSource({
-        name: data.url ?? clean,
-        type: "WEB",
-        size: "Website",
-        chunks: data.chunks,
-      });
+      await refreshSources();
 
       setUrl("");
       setAddStatus(`Website added (${data.chunks} chunks).`);
     } catch (error) {
       console.error(error);
-      setAddStatus("Could not add the website. Please try again.");
+      setAddStatus(
+        error instanceof ApiError && error.detail
+          ? error.detail
+          : "Could not add the website. Please try again."
+      );
     } finally {
       setBusy(false);
     }
@@ -215,16 +178,16 @@ export default function Dashboard({
         </div>
 
         <div className="hm-hero-art" aria-hidden="true">
-          <span className="hm-tile t1">🌐</span>
-          <span className="hm-tile t2">📄</span>
-          <span className="hm-tile t3">🔍</span>
+          <span className="hm-tile t1"><Icon name="globe" size={28} /></span>
+          <span className="hm-tile t2"><Icon name="file" size={28} /></span>
+          <span className="hm-tile t3"><Icon name="search" size={28} /></span>
         </div>
       </section>
 
       <div className="hm-row hm-row-2">
         <section ref={addRef} className="sx-card">
           <div className="sx-card-head">
-            <div className="sx-card-icon">🗂️</div>
+            <div className="sx-card-icon"><Icon name="folder" size={20} /></div>
             <div>
               <h3>Add Knowledge</h3>
               <p>Upload documents or add a website to your knowledge base.</p>
@@ -245,7 +208,7 @@ export default function Dashboard({
                 handleFile(e.dataTransfer.files?.[0]);
               }}
             >
-              <span className="hm-drop-icon">☁️</span>
+              <span className="hm-drop-icon"><Icon name="upload" size={30} /></span>
               <span>Drop files here or</span>
 
               <button
@@ -302,7 +265,7 @@ export default function Dashboard({
 
         <section className="sx-card">
           <div className="sx-card-head">
-            <div className="sx-card-icon">🔍</div>
+            <div className="sx-card-icon"><Icon name="search" size={20} /></div>
             <div>
               <h3>Ask a Question</h3>
               <p>Search through your documents and websites.</p>
@@ -367,10 +330,10 @@ export default function Dashboard({
         <section className="sx-card">
           <div className="hm-head-row">
             <div className="sx-card-head hm-nomargin">
-              <div className="sx-card-icon">📁</div>
+              <div className="sx-card-icon"><Icon name="database" size={20} /></div>
               <div>
                 <h3>Knowledge Base</h3>
-                <p>{sources.length} sources this session</p>
+                <p>{sources.length} sources</p>
               </div>
             </div>
 
@@ -420,8 +383,8 @@ export default function Dashboard({
             )}
 
             {shown.map((source) => (
-              <div key={source.name} className="hm-source">
-                <span className="hm-file-icon">{TYPE_ICON[source.type]}</span>
+              <div key={source.id} className="hm-source">
+                <span className="hm-file-icon"><FileBadge type={source.type} /></span>
 
                 <div className="hm-source-info">
                   <strong>{source.name}</strong>
@@ -450,7 +413,7 @@ export default function Dashboard({
         <section className="sx-card">
           <div className="hm-head-row">
             <div className="sx-card-head hm-nomargin">
-              <div className="sx-card-icon">📋</div>
+              <div className="sx-card-icon"><Icon name="list" size={20} /></div>
               <div>
                 <h3>Search Results</h3>
               </div>
@@ -490,7 +453,7 @@ export default function Dashboard({
                 <span className="hm-result-body">
                   <span className="hm-result-text">{result.text}</span>
                   <span className="hm-result-src">
-                    {resultIcon(result.type)} {result.source ?? "Unknown"}
+                    {result.source ?? "Unknown"}
                   </span>
                 </span>
 
@@ -505,7 +468,7 @@ export default function Dashboard({
         <section className="sx-card">
           <div className="hm-head-row">
             <div className="sx-card-head hm-nomargin">
-              <div className="sx-card-icon">👁️</div>
+              <div className="sx-card-icon"><Icon name="eye" size={20} /></div>
               <div>
                 <h3>Source Preview</h3>
               </div>
@@ -532,7 +495,7 @@ export default function Dashboard({
           {current && (
             <>
               <div className="hm-preview-head">
-                <span className="hm-file-icon">{resultIcon(current.type)}</span>
+                <span className="hm-file-icon"><FileBadge type={current.type} /></span>
                 <div className="hm-source-info">
                   <strong>{current.source ?? "Unknown source"}</strong>
                   <small>

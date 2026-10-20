@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Page, Source } from "../../types";
-import {
-  deleteSourceByName,
-  fetchSourceContent,
-} from "../../services/sourcesService";
+import { deleteSource, fetchSourceContent } from "../../services/sourcesService";
+
+import Icon from "../../components/common/Icon";
+import FileBadge from "../../components/common/FileBadge";
 
 type KnowledgeBaseProps = {
   sources: Source[];
@@ -16,14 +16,6 @@ type SortKey = "date" | "name" | "chunks" | "size";
 type PanelTab = "overview" | "content";
 
 const PAGE_SIZE = 10;
-
-const TYPE_ICON: Record<Source["type"], string> = {
-  PDF: "📕",
-  DOCX: "📘",
-  PPT: "📙",
-  EXCEL: "📗",
-  WEB: "🌐",
-};
 
 function typeLabel(source: Source): string {
   if (source.type === "WEB") return "Website";
@@ -60,7 +52,7 @@ export default function KnowledgeBase({
   const [sortDesc, setSortDesc] = useState(true);
   const [pageNo, setPageNo] = useState(1);
 
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("overview");
   const [content, setContent] = useState<string[] | null>(null);
   const [contentError, setContentError] = useState("");
@@ -73,14 +65,14 @@ export default function KnowledgeBase({
   }, [refreshSources]);
 
   useEffect(() => {
-    if (!selectedName || panelTab !== "content") return;
+    if (selectedId === null || panelTab !== "content") return;
 
     let cancelled = false;
 
     setContent(null);
     setContentError("");
 
-    fetchSourceContent(selectedName)
+    fetchSourceContent(selectedId)
       .then((chunks) => {
         if (!cancelled) setContent(chunks);
       })
@@ -91,7 +83,7 @@ export default function KnowledgeBase({
     return () => {
       cancelled = true;
     };
-  }, [selectedName, panelTab]);
+  }, [selectedId, panelTab]);
 
   const websites = sources.filter((s) => s.type === "WEB");
   const documentCount = sources.length - websites.length;
@@ -136,10 +128,10 @@ export default function KnowledgeBase({
     currentPage * PAGE_SIZE
   );
 
-  const selected = sources.find((s) => s.name === selectedName);
+  const selected = sources.find((s) => s.id === selectedId);
 
   const openSource = (source: Source) => {
-    setSelectedName(source.name);
+    setSelectedId(source.id);
     setPanelTab("overview");
     setContent(null);
     setContentError("");
@@ -147,7 +139,7 @@ export default function KnowledgeBase({
 
   const removeSource = async (source: Source) => {
     const ok = window.confirm(
-      `Remove "${source.name}" from the knowledge base?`
+      `Remove "${source.name}" from the knowledge base? It will also be removed from every classroom.`
     );
 
     if (!ok) return;
@@ -156,8 +148,8 @@ export default function KnowledgeBase({
     setMessage("");
 
     try {
-      await deleteSourceByName(source.name);
-      setSelectedName(null);
+      await deleteSource(source.id);
+      setSelectedId(null);
       await refreshSources();
       setMessage(`${source.name} was removed.`);
     } catch (error) {
@@ -172,7 +164,7 @@ export default function KnowledgeBase({
     <div className="page-content kb-page">
       <div className="kb-head">
         <div className="kb-title">
-          <div className="sx-header-icon">📦</div>
+          <div className="sx-header-icon"><Icon name="database" size={24} /></div>
           <div>
             <h1>Knowledge Base</h1>
             <p>
@@ -194,7 +186,7 @@ export default function KnowledgeBase({
 
       <div className="kb-stats">
         <div className="kb-stat">
-          <div className="kb-stat-icon">📄</div>
+          <div className="kb-stat-icon"><Icon name="file" size={22} /></div>
           <div>
             <span>Total Sources</span>
             <strong>{sources.length}</strong>
@@ -205,7 +197,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🗄️</div>
+          <div className="kb-stat-icon"><Icon name="layers" size={22} /></div>
           <div>
             <span>Total Chunks</span>
             <strong>{totalChunks.toLocaleString()}</strong>
@@ -214,7 +206,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🗂️</div>
+          <div className="kb-stat-icon"><Icon name="folder" size={22} /></div>
           <div>
             <span>File Types</span>
             <strong>{fileTypes.length}</strong>
@@ -223,7 +215,7 @@ export default function KnowledgeBase({
         </div>
 
         <div className="kb-stat">
-          <div className="kb-stat-icon">🌐</div>
+          <div className="kb-stat-icon"><Icon name="globe" size={22} /></div>
           <div>
             <span>Web Sources</span>
             <strong>{websites.length}</strong>
@@ -327,16 +319,16 @@ export default function KnowledgeBase({
                 <tbody>
                   {rows.map((source) => (
                     <tr
-                      key={source.name}
+                      key={source.id}
                       className={`kb-row ${
-                        selectedName === source.name ? "active" : ""
+                        selectedId === source.id ? "active" : ""
                       }`}
                       onClick={() => openSource(source)}
                     >
                       <td>
                         <div className="kb-name">
                           <span className="hm-file-icon">
-                            {TYPE_ICON[source.type]}
+                            <FileBadge type={source.type} />
                           </span>
                           <div>
                             <strong>{source.name}</strong>
@@ -411,7 +403,7 @@ export default function KnowledgeBase({
         {selected && (
           <aside className="sx-card kb-panel">
             <div className="kb-panel-head">
-              <span className="hm-file-icon">{TYPE_ICON[selected.type]}</span>
+              <span className="hm-file-icon"><FileBadge type={selected.type} /></span>
 
               <div className="hm-source-info">
                 <strong>{selected.name}</strong>
@@ -428,7 +420,7 @@ export default function KnowledgeBase({
                 type="button"
                 className="hm-x"
                 aria-label="Close details"
-                onClick={() => setSelectedName(null)}
+                onClick={() => setSelectedId(null)}
               >
                 ✕
               </button>
@@ -492,7 +484,7 @@ export default function KnowledgeBase({
                     className="kb-action"
                     onClick={() => setPanelTab("content")}
                   >
-                    👁️ View Content
+                    <Icon name="eye" size={15} /> View Content
                   </button>
 
                   <button
@@ -501,7 +493,7 @@ export default function KnowledgeBase({
                     disabled={busy}
                     onClick={() => removeSource(selected)}
                   >
-                    🗑️ Remove Source
+                    <Icon name="trash" size={15} /> Remove Source
                   </button>
                 </div>
               </>

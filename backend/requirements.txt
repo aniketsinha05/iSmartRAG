@@ -1,20 +1,39 @@
+# --- web API ---
 fastapi
 uvicorn
 python-multipart
-python-pptx
-python-docx
-openpyxl
-pandas
-xlrd
-pypdf
-playwright
-beautifulsoup4
-faiss-cpu
-numpy
-groq
+email-validator
+
+# --- database ---
+SQLAlchemy
+psycopg2-binary
+alembic
+
+# --- auth ---
+bcrypt
+PyJWT
+
+# --- config ---
 python-dotenv
-transformers
+
+# --- document parsers ---
+pypdf
+python-docx
+python-pptx
+openpyxl
+xlrd
+playwright
+
+# --- vector search / embeddings ---
+numpy
+faiss-cpu
 torch
+transformers
 langchain-text-splitters
-rank_bm25
- 
+
+# --- LLM ---
+groq
+
+# --- tests ---
+pytest
+httpx

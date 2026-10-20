@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { QuizQuestion } from "../../types";
 import { LETTERS, percentOf, scoreClass, sourceLabel } from "./quizUtils";
 
@@ -33,21 +34,45 @@ export default function QuizResult({
     .filter(({ q, a }) => a !== q.answerIndex);
   const correct = total - wrong.length;
   const percent = percentOf(correct, total);
+  const headline =
+    percent >= 80 ? "Excellent work" : percent >= 60 ? "Good effort" : "Keep practising";
 
   return (
-    <section className="sx-card">
-      <span className="sx-hint">{title}</span>
-      <div className={`qz-score ${scoreClass(percent)}`}>{percent}%</div>
-      <p>
-        {correct} of {total} correct
-      </p>
-      {SAVE_TEXT[saveState] && <small className="hm-meta">{SAVE_TEXT[saveState]}</small>}
+    <section className="qz-card">
+      <div className="qz-result-top">
+        <div
+          className={`qz-ring ${scoreClass(percent)}`}
+          style={{ "--pct": percent } as CSSProperties}
+        >
+          <span>{percent}%</span>
+        </div>
+
+        <div>
+          <span className="qz-hint">{title}</span>
+          <h2>{headline}</h2>
+          <p>
+            {correct} of {total} correct
+          </p>
+          {SAVE_TEXT[saveState] && <small className="hm-meta">{SAVE_TEXT[saveState]}</small>}
+        </div>
+      </div>
+
+      <div className="qz-breakdown">
+        <div>
+          <strong>{correct}</strong>
+          <span>Correct</span>
+        </div>
+        <div>
+          <strong>{wrong.length}</strong>
+          <span>To review</span>
+        </div>
+      </div>
 
       {wrong.length === 0 ? (
         <p>All answers correct. Nothing to review.</p>
       ) : (
         <>
-          <h3 style={{ marginTop: 16 }}>Review wrong answers ({wrong.length})</h3>
+          <h3>Review wrong answers</h3>
           {wrong.map(({ q, i, a }) => (
             <div className="qz-review" key={q.id}>
               <strong>
@@ -67,10 +92,12 @@ export default function QuizResult({
       )}
 
       <div className="qz-actions">
-        {onRetry && (
+        {onRetry ? (
           <button type="button" className="sx-btn" onClick={onRetry}>
             Retry
           </button>
+        ) : (
+          <span />
         )}
         <button type="button" className="hm-primary" onClick={onNew}>
           {newLabel}

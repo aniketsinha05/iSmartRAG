@@ -1,0 +1,190 @@
+.auth-wrap {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  background: var(--page-bg, #f7f7ff);
+}
+
+/* ---------- Left brand panel ---------- */
+.auth-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 48px;
+  text-align: center;
+  color: #fff;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(101, 88, 223, 0.45), transparent 55%),
+    radial-gradient(circle at 80% 85%, rgba(99, 102, 241, 0.3), transparent 50%),
+    linear-gradient(160deg, #10112b 0%, #29215b 100%);
+}
+
+.auth-brand img {
+  width: clamp(120px, 18vw, 190px);
+  height: auto;
+  filter: drop-shadow(0 0 28px rgba(96, 165, 250, 0.55));
+}
+
+.auth-brand h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  letter-spacing: 3px;
+  font-weight: 700;
+}
+
+.auth-brand p {
+  margin: 0;
+  max-width: 340px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- Right form side ---------- */
+.auth-side {
+  display: grid;
+  place-items: center;
+  padding: 32px 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 390px;
+  display: grid;
+  gap: 14px;
+  padding: 32px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 10px 40px rgba(17, 24, 39, 0.08);
+  color: var(--ink, #29234b);
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.3px;
+}
+
+.auth-sub {
+  margin: -6px 0 6px;
+  font-size: 0.92rem;
+  opacity: 0.65;
+}
+
+.auth-card input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.18);
+  font-size: 0.98rem;
+  background: transparent;
+  color: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-card input:focus {
+  border-color: var(--brand, #6558df);
+  box-shadow: 0 0 0 3px rgba(101, 88, 223, 0.18);
+}
+
+.auth-card button[type="submit"] {
+  padding: 12px;
+  border-radius: 10px;
+  border: 0;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand, #6558df);
+  transition: filter 0.15s, transform 0.05s;
+}
+
+.auth-card button[type="submit"]:hover { filter: brightness(1.08); }
+.auth-card button[type="submit"]:active { transform: translateY(1px); }
+.auth-card button:disabled { opacity: 0.6; cursor: wait; }
+
+.auth-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #b42318;
+  background: rgba(229, 72, 77, 0.1);
+}
+
+.auth-switch {
+  margin: 0;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.auth-switch button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--brand, #6558df);
+}
+
+/* ---------- Dark mode (your app uses body.dark-mode) ---------- */
+body.dark-mode .auth-wrap { background: #090a18; }
+body.dark-mode .auth-card {
+  background: #111225;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  color: #f4f0ff;
+}
+body.dark-mode .auth-card input { border-color: rgba(255, 255, 255, 0.18); }
+body.dark-mode .auth-error { color: #ff8a8f; }
+
+/* ---------- Mobile: hide the big panel, show a small logo ---------- */
+.auth-mobile-logo { display: none; }
+
+@media (max-width: 860px) {
+  .auth-wrap { grid-template-columns: 1fr; }
+  .auth-brand { display: none; }
+  .auth-mobile-logo {
+    display: block;
+    width: 72px;
+    margin: 0 auto 4px;
+  }
+}
+
+/* Temporary logout button (used by AuthGate) */
+.logout-btn {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1000;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* show / hide password */
+.pw-field {
+  position: relative;
+  display: grid;
+}
+
+.pw-field input {
+  padding-right: 64px;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--brand, #6558df);
+}

@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import type { Classroom, QuizDifficulty, QuizSettings, Source } from "../../types";
 import { fetchClassroomDocuments } from "../../services/classroomService";
+import Icon from "../../components/common/Icon";
 
-const DIFFICULTIES: QuizDifficulty[] = ["easy", "medium", "hard"];
+const DIFFICULTIES: { value: QuizDifficulty; label: string; hint: string }[] = [
+  { value: "easy", label: "Easy", hint: "Recall key facts" },
+  { value: "medium", label: "Medium", hint: "Apply what you know" },
+  { value: "hard", label: "Hard", hint: "Analyse and compare" },
+];
 const COUNTS: (5 | 10)[] = [5, 10];
 
 type Props = {
@@ -12,11 +18,36 @@ type Props = {
   onGenerate: (settings: QuizSettings) => void;
 };
 
+function Step({
+  n,
+  title,
+  hint,
+  children,
+}: {
+  n: number;
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="qz-step">
+      <span className="qz-step-num">{n}</span>
+      <div className="qz-step-body">
+        <div className="qz-step-head">
+          <strong>{title}</strong>
+          {hint && <span className="qz-hint">{hint}</span>}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props) {
   const [classroomId, setClassroomId] = useState<number | null>(null);
   const [docs, setDocs] = useState<Source[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [numQuestions, setNumQuestions] = useState<5 | 10>(5);
   const [difficulty, setDifficulty] = useState<QuizDifficulty>("medium");
   const [includeTrueFalse, setIncludeTrueFalse] = useState(false);
@@ -45,19 +76,21 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
     };
   }, [activeId]);
 
-  const toggleDoc = (name: string) =>
+  const toggleDoc = (id: number) =>
     setSelected((cur) =>
-      cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name]
+      cur.includes(id) ? cur.filter((n) => n !== id) : [...cur, id]
     );
 
   const canGenerate =
     activeId !== null && !docsLoading && docs.length > 0 && !busy;
 
+  const scopeCount = selected.length === 0 ? docs.length : selected.length;
+
   const generate = () => {
     if (activeId === null) return;
     onGenerate({
       classroomId: activeId,
-      documentNames: selected,
+      documentIds: selected,
       numQuestions,
       difficulty,
       includeTrueFalse,
@@ -65,23 +98,21 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
   };
 
   return (
-    <section className="sx-card">
-      <div className="sx-card-head">
-        <div className="sx-card-icon">{"\u2699\uFE0F"}</div>
-        <div>
-          <h3>1. Quiz Setup</h3>
-          <p>Choose your classroom, documents and quiz settings.</p>
-        </div>
-      </div>
+    <section className="qz-card">
+      <header className="qz-card-head">
+        <h2>Create a quiz</h2>
+        <p>Choose what to study, then how you want to be tested.</p>
+      </header>
 
       {classrooms.length === 0 ? (
-        <div className="hm-empty">No classrooms found. Is the backend running?</div>
+        <div className="hm-empty">
+          No classrooms yet. Create one on the Classroom page first.
+        </div>
       ) : (
         <>
-          <div className="qz-field">
-            <strong>Select Classroom</strong>
+          <Step n={1} title="Classroom" hint="Where the questions come from">
             <select
-              className="sx-select"
+              className="sx-select full"
               value={activeId ?? ""}
               disabled={busy}
               onChange={(e) => setClassroomId(Number(e.target.value))}
@@ -92,18 +123,15 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
                 </option>
               ))}
             </select>
-          </div>
+          </Step>
 
-          <div className="qz-field">
-            <div className="qz-field-head">
-              <strong>Select Documents (Optional)</strong>
-              <span className="sx-hint">
-                {selected.length === 0 ? "All documents" : `${selected.length} selected`}
-              </span>
-            </div>
-
+          <Step
+            n={2}
+            title="Documents"
+            hint={selected.length === 0 ? "All documents (default)" : `${selected.length} selected`}
+          >
             {docsLoading ? (
-              <div className="hm-meta">Loading documents...</div>
+              <span className="qz-hint">Loading documents...</span>
             ) : docs.length === 0 ? (
               <div className="hm-empty">
                 This classroom has no documents yet.
@@ -119,58 +147,64 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
                 </button>
               </div>
             ) : (
-              <div className="qz-docs">
-                {docs.map((d) => (
-                  <label key={d.name} className="qz-doc">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(d.name)}
-                      disabled={busy}
-                      onChange={() => toggleDoc(d.name)}
-                    />
-                    <span>{d.name}</span>
-                  </label>
-                ))}
-              </div>
+              <>
+                <div className="qz-docs">
+                  {docs.map((d) => (
+                    <label
+                      key={d.id}
+                      className={`qz-doc ${selected.includes(d.id) ? "on" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(d.id)}
+                        disabled={busy}
+                        onChange={() => toggleDoc(d.id)}
+                      />
+                      <span>{d.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {selected.length > 0 && (
+                  <button type="button" className="hm-link qz-clear" onClick={() => setSelected([])}>
+                    Clear selection
+                  </button>
+                )}
+              </>
             )}
-          </div>
+          </Step>
 
-          <div className="qz-field">
-            <strong>Number of Questions</strong>
-            <div className="qz-seg">
+          <Step n={3} title="Difficulty">
+            <div className="qz-choices">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  disabled={busy}
+                  className={`qz-choice ${difficulty === d.value ? "active" : ""}`}
+                  onClick={() => setDifficulty(d.value)}
+                >
+                  <strong>{d.label}</strong>
+                  <span>{d.hint}</span>
+                </button>
+              ))}
+            </div>
+          </Step>
+
+          <Step n={4} title="Length and style">
+            <div className="qz-seg" role="group" aria-label="Number of questions">
               {COUNTS.map((n) => (
                 <button
                   key={n}
                   type="button"
                   disabled={busy}
-                  className={`hm-tab ${numQuestions === n ? "active" : ""}`}
+                  className={numQuestions === n ? "active" : ""}
                   onClick={() => setNumQuestions(n)}
                 >
-                  {n}
+                  {n} questions
                 </button>
               ))}
             </div>
-          </div>
 
-          <div className="qz-field">
-            <strong>Difficulty</strong>
-            <div className="qz-seg">
-              {DIFFICULTIES.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  disabled={busy}
-                  className={`hm-tab ${difficulty === d ? "active" : ""}`}
-                  onClick={() => setDifficulty(d)}
-                >
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="qz-field">
-            <strong>Question Type</strong>
             <label className="qz-doc">
               <input
                 type="checkbox"
@@ -178,21 +212,35 @@ export default function QuizSetup({ classrooms, busy, error, onGenerate }: Props
                 disabled={busy}
                 onChange={(e) => setIncludeTrueFalse(e.target.checked)}
               />
-              <span>Multiple choice, plus some True / False</span>
+              <span>Mix in some true / false questions</span>
             </label>
-          </div>
+          </Step>
 
-          {error && <p className="hm-error">{error}</p>}
+          <footer className="qz-footer">
+            <p className="qz-summary">
+              {numQuestions} {difficulty} questions from {scopeCount} document
+              {scopeCount === 1 ? "" : "s"}
+              {includeTrueFalse ? ", including true / false" : ""}.
+            </p>
 
-          <button
-            type="button"
-            className="hm-primary"
-            style={{ width: "100%", marginTop: 16 }}
-            disabled={!canGenerate}
-            onClick={generate}
-          >
-            {busy ? "Generating..." : "\u2728 Generate Quiz"}
-          </button>
+            {error && <p className="hm-error">{error}</p>}
+
+            <button
+              type="button"
+              className="hm-primary qz-generate"
+              disabled={!canGenerate}
+              onClick={generate}
+            >
+              {busy ? (
+                "Generating..."
+              ) : (
+                <>
+                  <Icon name="sparkle" size={16} />
+                  Generate quiz
+                </>
+              )}
+            </button>
+          </footer>
         </>
       )}
     </section>

@@ -1,10 +1,14 @@
   import { useEffect, useState } from "react";
   import type { ReactNode } from "react";
   import { API_BASE_URL } from "../../config/env";
+  import { apiClient, ApiError } from "../../services/apiClient";
+
+  import Icon from "../../components/common/Icon";
+  import type { IconName } from "../../components/common/Icon";
 
   type ThemeChoice = "light" | "dark" | "system";
   type BackendState = "checking" | "online" | "offline";
-  type TabKey = "general" | "kb" | "api";
+  type TabKey = "general" | "kb" | "api" | "account";
 
   const STORAGE_KEY = "ismart-settings";
 
@@ -15,10 +19,11 @@
   const ANSWER_MODEL = "openai/gpt-oss-120b";
   const FILE_TYPES = "PDF, DOCX, PPTX, XLSX, XLS, CSV";
 
-  const TABS: { key: TabKey; icon: string; title: string; sub: string }[] = [
-    { key: "general", icon: "\u2699\uFE0F", title: "General", sub: "Appearance" },
-    { key: "kb", icon: "\uD83D\uDDC4\uFE0F", title: "Knowledge Base", sub: "Storage and processing" },
-    { key: "api", icon: "\uD83D\uDD17", title: "API & Models", sub: "Backend connection" },
+  const TABS: { key: TabKey; icon: IconName; title: string; sub: string }[] = [
+    { key: "general", icon: "settings", title: "General", sub: "Appearance" },
+    { key: "kb", icon: "database", title: "Knowledge Base", sub: "Storage and processing" },
+    { key: "api", icon: "link", title: "API & Models", sub: "Backend connection" },
+    { key: "account", icon: "user", title: "Account", sub: "Change password" },
   ];
 
   function loadTheme(): ThemeChoice {
@@ -81,13 +86,13 @@
     title,
     sub,
   }: {
-    icon: string;
+    icon: IconName;
     title: string;
     sub: string;
   }) {
     return (
       <div className="sx-card-head">
-        <div className="sx-card-icon">{icon}</div>
+        <div className="sx-card-icon"><Icon name={icon} size={20} /></div>
         <div>
           <h3>{title}</h3>
           <p>{sub}</p>
@@ -101,9 +106,69 @@
   }: {
     sourceCount?: number;
   }) {
-    const [theme, setTheme] = useState<ThemeChoice>(loadTheme);
+    const [theme, setTheme] = useState<ThemeChoice>(loadTheme);   // keep YOUR original right-hand side here
+    useEffect(() => {
+      const sync = () => setTheme(loadTheme());
+      window.addEventListener("viora:theme", sync);
+      return () => window.removeEventListener("viora:theme", sync);
+    }, []);
+    
     const [tab, setTab] = useState<TabKey>("general");
     const [backend, setBackend] = useState<BackendState>("checking");
+
+      const [currentPw, setCurrentPw] = useState("");
+      const [newPw, setNewPw] = useState("");
+      const [confirmPw, setConfirmPw] = useState("");
+      const [showPw, setShowPw] = useState(false);
+      const [pwBusy, setPwBusy] = useState(false);
+      const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+      const changePassword = async () => {
+        setPwMsg(null);
+
+        if (newPw.length < 8) {
+          setPwMsg({ ok: false, text: "New password must be at least 8 characters." });
+          return;
+        }
+        if (new TextEncoder().encode(newPw).length > 72) {
+          setPwMsg({ ok: false, text: "New password must be at most 72 bytes." });
+          return;
+        }
+        if (newPw !== confirmPw) {
+          setPwMsg({ ok: false, text: "New passwords do not match." });
+          return;
+        }
+        if (newPw === currentPw) {
+          setPwMsg({ ok: false, text: "New password must be different from the current one." });
+          return;
+        }
+
+        setPwBusy(true);
+        try {
+          await apiClient("/auth/change-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              current_password: currentPw,
+              new_password: newPw,
+            }),
+          });
+          setCurrentPw("");
+          setNewPw("");
+          setConfirmPw("");
+          setPwMsg({ ok: true, text: "Password changed successfully." });
+        } catch (err) {
+          setPwMsg({
+            ok: false,
+            text:
+              err instanceof ApiError && err.detail
+                ? err.detail
+                : "Could not change the password. Is the backend running?",
+          });
+        } finally {
+          setPwBusy(false);
+        }
+      };
 
     useEffect(() => {
       try {
@@ -159,7 +224,7 @@
     return (
       <div className="page-content sx-page">
         <div className="sx-header">
-          <div className="sx-header-icon">{"\u2699\uFE0F"}</div>
+          <div className="sx-header-icon"><Icon name="settings" size={24} /></div>
           <div>
             <h1>Settings</h1>
             <p>Appearance, knowledge base details and backend connection.</p>
@@ -175,7 +240,7 @@
                 className={`sx-menu-item ${tab === item.key ? "active" : ""}`}
                 onClick={() => setTab(item.key)}
               >
-                <span className="sx-menu-icon">{item.icon}</span>
+                <span className="sx-menu-icon"><Icon name={item.icon} size={17} /></span>
                 <span>
                   <strong>{item.title}</strong>
                   <small>{item.sub}</small>
@@ -188,7 +253,7 @@
             {tab === "general" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\u2699\uFE0F"}
+                  icon="settings"
                   title="General"
                   sub="Choose how the app looks. Saved in this browser."
                 />
@@ -197,9 +262,9 @@
                 <div className="sx-themes">
                   {(
                     [
-                      ["light", "\u2600\uFE0F", "Light"],
-                      ["dark", "\uD83C\uDF19", "Dark"],
-                      ["system", "\uD83D\uDDA5\uFE0F", "System"],
+                      ["light", "sun", "Light"],
+                      ["dark", "moon", "Dark"],
+                      ["system", "monitor", "System"],
                     ] as const
                   ).map(([value, icon, label]) => (
                     <button
@@ -208,7 +273,7 @@
                       className={`sx-theme ${theme === value ? "active" : ""}`}
                       onClick={() => setTheme(value)}
                     >
-                      <span>{icon}</span>
+                      <span><Icon name={icon} size={20} /></span>
                       <span>{label}</span>
                     </button>
                   ))}
@@ -219,7 +284,7 @@
             {tab === "kb" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\uD83D\uDDC4\uFE0F"}
+                  icon="database"
                   title="Knowledge Base"
                   sub="How your documents are stored and processed. Set in the backend."
                 />
@@ -270,10 +335,89 @@
               </section>
             )}
 
+            {tab === "account" && (
+                <section className="sx-card">
+                  <CardHead
+                    icon="user"
+                    title="User Config"
+                    sub="Change the password for your account."
+                  />
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      changePassword();
+                    }}
+                  >
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">Current password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={currentPw}
+                        onChange={(e) => setCurrentPw(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">New password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={newPw}
+                        onChange={(e) => setNewPw(e.target.value)}
+                      />
+                      <span className="sx-hint">At least 8 characters.</span>
+                    </div>
+
+                    <div className="sx-field-stack">
+                      <strong className="sx-label">Confirm new password</strong>
+                      <input
+                        className="sx-input full"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={confirmPw}
+                        onChange={(e) => setConfirmPw(e.target.value)}
+                      />
+                    </div>
+
+                    <label
+                      className="sx-hint"
+                      style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showPw}
+                        onChange={(e) => setShowPw(e.target.checked)}
+                      />
+                      Show passwords
+                    </label>
+
+                    {pwMsg && (
+                      <p className={pwMsg.ok ? "sx-note" : "hm-error"} style={{ marginTop: 12 }}>
+                        {pwMsg.text}
+                      </p>
+                    )}
+
+                    <div className="sx-check">
+                      <button
+                        type="submit"
+                        className="hm-primary"
+                        disabled={pwBusy || !currentPw || !newPw || !confirmPw}
+                      >
+                        {pwBusy ? "Saving..." : "Change password"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+              )}
+
             {tab === "api" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\uD83D\uDD17"}
+                  icon="link"
                   title="API & Models"
                   sub="The backend this app talks to."
                 />
