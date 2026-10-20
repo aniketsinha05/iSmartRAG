@@ -3,6 +3,9 @@
   import { API_BASE_URL } from "../../config/env";
   import { apiClient, ApiError } from "../../services/apiClient";
 
+  import Icon from "../../components/common/Icon";
+  import type { IconName } from "../../components/common/Icon";
+
   type ThemeChoice = "light" | "dark" | "system";
   type BackendState = "checking" | "online" | "offline";
   type TabKey = "general" | "kb" | "api" | "account";
@@ -16,11 +19,11 @@
   const ANSWER_MODEL = "openai/gpt-oss-120b";
   const FILE_TYPES = "PDF, DOCX, PPTX, XLSX, XLS, CSV";
 
-  const TABS: { key: TabKey; icon: string; title: string; sub: string }[] = [
-    { key: "general", icon: "\u2699\uFE0F", title: "General", sub: "Appearance" },
-    { key: "kb", icon: "\uD83D\uDDC4\uFE0F", title: "Knowledge Base", sub: "Storage and processing" },
-    { key: "api", icon: "\uD83D\uDD17", title: "API & Models", sub: "Backend connection" },
-    { key: "account", icon: "\uD83D\uDC64", title: "User Config", sub: "Change password" },
+  const TABS: { key: TabKey; icon: IconName; title: string; sub: string }[] = [
+    { key: "general", icon: "settings", title: "General", sub: "Appearance" },
+    { key: "kb", icon: "database", title: "Knowledge Base", sub: "Storage and processing" },
+    { key: "api", icon: "link", title: "API & Models", sub: "Backend connection" },
+    { key: "account", icon: "user", title: "Account", sub: "Change password" },
   ];
 
   function loadTheme(): ThemeChoice {
@@ -83,13 +86,13 @@
     title,
     sub,
   }: {
-    icon: string;
+    icon: IconName;
     title: string;
     sub: string;
   }) {
     return (
       <div className="sx-card-head">
-        <div className="sx-card-icon">{icon}</div>
+        <div className="sx-card-icon"><Icon name={icon} size={20} /></div>
         <div>
           <h3>{title}</h3>
           <p>{sub}</p>
@@ -103,7 +106,13 @@
   }: {
     sourceCount?: number;
   }) {
-    const [theme, setTheme] = useState<ThemeChoice>(loadTheme);
+    const [theme, setTheme] = useState<ThemeChoice>(loadTheme);   // keep YOUR original right-hand side here
+    useEffect(() => {
+      const sync = () => setTheme(loadTheme());
+      window.addEventListener("viora:theme", sync);
+      return () => window.removeEventListener("viora:theme", sync);
+    }, []);
+    
     const [tab, setTab] = useState<TabKey>("general");
     const [backend, setBackend] = useState<BackendState>("checking");
 
@@ -215,7 +224,7 @@
     return (
       <div className="page-content sx-page">
         <div className="sx-header">
-          <div className="sx-header-icon">{"\u2699\uFE0F"}</div>
+          <div className="sx-header-icon"><Icon name="settings" size={24} /></div>
           <div>
             <h1>Settings</h1>
             <p>Appearance, knowledge base details and backend connection.</p>
@@ -231,7 +240,7 @@
                 className={`sx-menu-item ${tab === item.key ? "active" : ""}`}
                 onClick={() => setTab(item.key)}
               >
-                <span className="sx-menu-icon">{item.icon}</span>
+                <span className="sx-menu-icon"><Icon name={item.icon} size={17} /></span>
                 <span>
                   <strong>{item.title}</strong>
                   <small>{item.sub}</small>
@@ -244,7 +253,7 @@
             {tab === "general" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\u2699\uFE0F"}
+                  icon="settings"
                   title="General"
                   sub="Choose how the app looks. Saved in this browser."
                 />
@@ -253,9 +262,9 @@
                 <div className="sx-themes">
                   {(
                     [
-                      ["light", "\u2600\uFE0F", "Light"],
-                      ["dark", "\uD83C\uDF19", "Dark"],
-                      ["system", "\uD83D\uDDA5\uFE0F", "System"],
+                      ["light", "sun", "Light"],
+                      ["dark", "moon", "Dark"],
+                      ["system", "monitor", "System"],
                     ] as const
                   ).map(([value, icon, label]) => (
                     <button
@@ -264,7 +273,7 @@
                       className={`sx-theme ${theme === value ? "active" : ""}`}
                       onClick={() => setTheme(value)}
                     >
-                      <span>{icon}</span>
+                      <span><Icon name={icon} size={20} /></span>
                       <span>{label}</span>
                     </button>
                   ))}
@@ -275,7 +284,7 @@
             {tab === "kb" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\uD83D\uDDC4\uFE0F"}
+                  icon="database"
                   title="Knowledge Base"
                   sub="How your documents are stored and processed. Set in the backend."
                 />
@@ -329,7 +338,7 @@
             {tab === "account" && (
                 <section className="sx-card">
                   <CardHead
-                    icon={"\uD83D\uDC64"}
+                    icon="user"
                     title="User Config"
                     sub="Change the password for your account."
                   />
@@ -408,7 +417,7 @@
             {tab === "api" && (
               <section className="sx-card">
                 <CardHead
-                  icon={"\uD83D\uDD17"}
+                  icon="link"
                   title="API & Models"
                   sub="The backend this app talks to."
                 />

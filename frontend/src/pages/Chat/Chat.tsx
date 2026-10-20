@@ -12,6 +12,8 @@ import {
   deleteGeneralChat,
 } from "../../services/classroomService";
 
+import Icon from "../../components/common/Icon";
+
 const SUGGESTIONS = [
   { title: "Summarize my sources",  text: "Summarize the main points across my sources." },
   { title: "Find the key findings", text: "What are the key findings?" },
@@ -373,7 +375,7 @@ export default function Chat({
         <div className="ct-scroll">
           {messages.length === 0 ? (
             <div className="ct-welcome">
-              <div className="ct-logo">iS</div>
+              <div className="ct-logo"><Icon name="sparkle" size={26} /></div>
               <h2>How can I help you today?</h2>
               <p>
                 {hasScope
@@ -404,7 +406,7 @@ export default function Chat({
                   </div>
                 ) : (
                   <div className="ct-row" key={index}>
-                    <div className="ct-avatar">iS</div>
+                    <div className="ct-avatar"><Icon name="sparkle" size={16} /></div>
                     <div className="ct-ai">
                       <div className="ct-text">{message.text}</div>
                       <div className="ct-tools">
@@ -429,7 +431,7 @@ export default function Chat({
 
               {loading && (
                 <div className="ct-row">
-                  <div className="ct-avatar">iS</div>
+                  <div className="ct-avatar"><Icon name="sparkle" size={16} /></div>
                   <div className="ct-dots" aria-label="Searching">
                     <i /><i /><i />
                   </div>
@@ -449,7 +451,7 @@ export default function Chat({
             <div className="ct-badges">
               {selectedRooms.map((r) => (
                 <span key={`room-${r.id}`} className="ct-badge">
-                  🏫 {r.name}
+                  {r.name}
                   <button
                     type="button"
                     onClick={() => toggleClassroom(r.id)}
@@ -462,7 +464,7 @@ export default function Chat({
 
               {selectedDocs.map((d) => (
                 <span key={`doc-${d.id}`} className="ct-badge">
-                  📄 {d.name.length > 28 ? d.name.slice(0, 25) + "…" : d.name}
+                  {d.name.length > 28 ? d.name.slice(0, 25) + "…" : d.name}
                   <button
                     type="button"
                     onClick={() => toggleDoc(d.id)}
@@ -496,7 +498,7 @@ export default function Chat({
                     checked={classroomIds.includes(r.id)}
                     onChange={() => toggleClassroom(r.id)}
                   />
-                  <span>🏫</span>
+                  <Icon name="classroom" size={16} />
                   <span style={{ flex: 1 }}>{r.name}</span>
                   <span className="sx-hint">
                     {r.documentCount} doc{r.documentCount !== 1 ? "s" : ""}
@@ -542,7 +544,7 @@ export default function Chat({
                       checked={selectedDocIds.includes(source.id)}
                       onChange={() => toggleDoc(source.id)}
                     />
-                    <span>📄</span>
+                    <Icon name="file" size={16} />
                     <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {source.name}
                     </span>

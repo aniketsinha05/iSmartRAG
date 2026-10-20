@@ -12,6 +12,7 @@ import ClassroomPicker from "./pages/Classroom/ClassroomPicker";
 
 import "./App.css";
 import "./theme.css";
+import "./viora.css";
 import { fetchSources } from "./services/sourcesService";
 
 const SLUGS: Record<Page, string> = {

@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  background: var(--page-bg, #f4f6fb);
+  background: var(--page-bg, #f7f7ff);
 }
 
 /* ---------- Left brand panel ---------- */
@@ -17,9 +17,9 @@
   text-align: center;
   color: #fff;
   background:
-    radial-gradient(circle at 25% 20%, rgba(37, 99, 235, 0.45), transparent 55%),
+    radial-gradient(circle at 25% 20%, rgba(101, 88, 223, 0.45), transparent 55%),
     radial-gradient(circle at 80% 85%, rgba(99, 102, 241, 0.3), transparent 50%),
-    linear-gradient(160deg, #0a1633 0%, #0f1f4d 100%);
+    linear-gradient(160deg, #10112b 0%, #29215b 100%);
 }
 
 .auth-brand img {
@@ -59,7 +59,7 @@
   background: #fff;
   border: 1px solid rgba(17, 24, 39, 0.08);
   box-shadow: 0 10px 40px rgba(17, 24, 39, 0.08);
-  color: var(--ink, #111827);
+  color: var(--ink, #29234b);
 }
 
 .auth-card h1 {
@@ -86,8 +86,8 @@
 }
 
 .auth-card input:focus {
-  border-color: var(--brand, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  border-color: var(--brand, #6558df);
+  box-shadow: 0 0 0 3px rgba(101, 88, 223, 0.18);
 }
 
 .auth-card button[type="submit"] {
@@ -98,7 +98,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  background: var(--brand, #2563eb);
+  background: var(--brand, #6558df);
   transition: filter 0.15s, transform 0.05s;
 }
 
@@ -127,16 +127,16 @@
   padding: 0;
   cursor: pointer;
   font-weight: 600;
-  color: var(--brand, #2563eb);
+  color: var(--brand, #6558df);
 }
 
 /* ---------- Dark mode (your app uses body.dark-mode) ---------- */
-body.dark-mode .auth-wrap { background: #0b1020; }
+body.dark-mode .auth-wrap { background: #090a18; }
 body.dark-mode .auth-card {
-  background: #111936;
+  background: #111225;
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: none;
-  color: #f5f5f5;
+  color: #f4f0ff;
 }
 body.dark-mode .auth-card input { border-color: rgba(255, 255, 255, 0.18); }
 body.dark-mode .auth-error { color: #ff8a8f; }
@@ -186,5 +186,5 @@ body.dark-mode .auth-error { color: #ff8a8f; }
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--brand, #2563eb);
+  color: var(--brand, #6558df);
 }

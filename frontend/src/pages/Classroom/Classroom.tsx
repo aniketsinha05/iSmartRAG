@@ -8,6 +8,9 @@ import {
   uploadToClassroom,
 } from "../../services/classroomService";
 
+import Icon from "../../components/common/Icon";
+import FileBadge from "../../components/common/FileBadge";
+
 type ClassroomPageProps = {
   classroomId: number;
   sources: Source[];
@@ -17,14 +20,6 @@ type ClassroomPageProps = {
 };
 
 const ACCEPT = ".pdf,.docx,.pptx,.xlsx,.xlsm,.xltx,.xls,.csv";
-
-const TYPE_ICON: Record<Source["type"], string> = {
-  PDF: "📕",
-  DOCX: "📘",
-  PPT: "📙",
-  EXCEL: "📗",
-  WEB: "🌐",
-};
 
 function typeLabel(source: Source): string {
   if (source.type === "WEB") return "Website";
@@ -182,7 +177,7 @@ export default function ClassroomPage({
     <div className="page-content kb-page cr-page">
       <div className="kb-head">
         <div className="kb-title">
-          <div className="sx-header-icon">🏫</div>
+          <div className="sx-header-icon"><Icon name="classroom" size={24} /></div>
           <div>
             <h1>{roomName}</h1>
             <p>
@@ -217,7 +212,7 @@ export default function ClassroomPage({
             window.location.hash = "/chat";
           }}
         >
-          💬 Chat with {roomName}
+          Chat with {roomName}
         </button>
       </div>
 
@@ -289,7 +284,7 @@ export default function ClassroomPage({
                     <td>
                       <div className="kb-name">
                         <span className="hm-file-icon">
-                          {TYPE_ICON[doc.type]}
+                          <FileBadge type={doc.type} />
                         </span>
                         <div>
                           <strong>{doc.name}</strong>
@@ -386,7 +381,7 @@ export default function ClassroomPage({
                         onChange={() => togglePick(source.id)}
                       />
                       <span className="hm-file-icon">
-                        {TYPE_ICON[source.type]}
+                        <FileBadge type={source.type} />
                       </span>
                       <span className="cr-item-info">
                         <strong>{source.name}</strong>
