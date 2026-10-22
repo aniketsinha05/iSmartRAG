@@ -30,7 +30,7 @@ backend/chats.json
 
 venv312/   
 
-
+.vscode/
 
 backend/quiz_attempts.json
 .env.docker
