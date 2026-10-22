@@ -1,0 +1,16 @@
+.git
+.github
+**/__pycache__
+**/*.pyc
+venv/
+venv312/
+.venv/
+.venv-1/
+.env
+.env.*
+backend/uploads/
+backend/faiss_db/
+backend/tests/
+frontend/node_modules/
+frontend/dist/
+*.md

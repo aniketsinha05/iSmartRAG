@@ -1,0 +1,26 @@
+# DOMAIN example: viora.example.com (gets free HTTPS)
+# For testing on your laptop use: http://localhost
+{$DOMAIN:http://localhost} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+	}
+
+	# Backend calls: /api/health -> backend:8000/health
+	handle_path /api/* {
+		request_body {
+			max_size 25MB
+		}
+		reverse_proxy backend:8000
+	}
+
+	# Everything else is the frontend
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
