@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 from backend.models import KnowledgeBase, VectorChunk
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE, "faiss_db")
+# DATA_DIR is set in Docker so data lives in one volume; on a laptop it stays in backend/
+DATA_DIR = os.getenv("DATA_DIR", BASE)
+DB_DIR = os.path.join(DATA_DIR, "faiss_db")
 os.makedirs(DB_DIR, exist_ok=True)
 
 DIM = 384
