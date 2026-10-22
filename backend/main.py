@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from typing import Annotated
@@ -37,7 +38,9 @@ app = FastAPI(title="MyBookAI API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4173"],
+    allow_origins=os.getenv(
+        "CORS_ORIGINS", "http://localhost:5173,http://localhost:4173"
+    ).split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,8 +53,9 @@ app.include_router(auth_router)  # /auth/register, /auth/login are the only publ
 DB = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
-UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parent))
+UPLOAD_DIR = DATA_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 PARSERS = {
     ".pdf": (parse_pdf_pieces, "pdf"),
