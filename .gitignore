@@ -33,3 +33,4 @@ venv312/
 
 
 backend/quiz_attempts.json
+.env.docker
