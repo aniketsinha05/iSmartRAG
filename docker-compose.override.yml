@@ -1,0 +1,6 @@
+services:
+  db:
+    profiles: ["disabled"]
+
+  migrate:
+    depends_on: []
